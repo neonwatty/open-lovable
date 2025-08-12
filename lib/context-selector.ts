@@ -99,7 +99,7 @@ User Request: "${userPrompt}"`);
   sections.push(buildFileStructureSection(manifest));
   
   // Add component patterns
-  const fileList = Object.keys(manifest.files).map(f => f.replace('/home/user/app/', '')).join('\n');
+  const fileList = Object.keys(manifest.files).map(f => f.replace('./sandbox/', '')).join('\n');
   sections.push(getComponentPatternPrompt(fileList));
   
   // Add primary files section
@@ -137,14 +137,14 @@ ${contextFiles.map(f => {
  */
 function buildFileStructureSection(manifest: FileManifest): string {
   const allFiles = Object.entries(manifest.files)
-    .map(([path]) => path.replace('/home/user/app/', ''))
+    .map(([path]) => path.replace('./sandbox/', ''))
     .filter(path => !path.includes('node_modules'))
     .sort();
   
   const componentFiles = Object.entries(manifest.files)
     .filter(([, info]) => info.type === 'component' || info.type === 'page')
     .map(([path, info]) => ({
-      path: path.replace('/home/user/app/', ''),
+      path: path.replace('./sandbox/', ''),
       name: info.componentInfo?.name || path.split('/').pop(),
       type: info.type,
     }));

@@ -423,7 +423,7 @@ function resolveImportPath(
   
   // Handle @/ alias (common in Vite projects)
   if (importPath.startsWith('@/')) {
-    const srcPath = importPath.replace('@/', '/home/user/app/src/');
+    const srcPath = importPath.replace('@/', './sandbox/src/');
     return resolveImportPath(fromFile, srcPath, manifest);
   }
   

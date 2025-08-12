@@ -11,7 +11,23 @@
     "test:integration": "node tests/e2b-integration.test.js",
     "test:api": "node tests/api-endpoints.test.js",
     "test:code": "node tests/code-execution.test.js",
-    "test:all": "npm run test:integration && npm run test:api && npm run test:code"
+    "test:sandbox-manager": "npx tsx tests/sandbox-manager-simple.test.js",
+    "test:sandbox-manager-vitest": "npx vitest lib/sandbox/__tests__/sandboxManager.integration.test.ts --run",
+    "test:vite-process-manager": "npx tsx tests/vite-process-manager-tsx.test.ts",
+    "test:vite-process-manager-vitest": "npx vitest lib/sandbox/__tests__/viteProcessManager.simple.test.ts --run",
+    "test:api-create-sandbox": "npx tsx tests/api-create-sandbox.test.js",
+    "test:api-create-sandbox-vitest": "npx vitest lib/api/__tests__/create-ai-sandbox.test.ts --run",
+    "test:task-1-integration": "npx tsx tests/task-1-integration.test.js",
+    "test:e2b-replacement": "npx tsx tests/e2b-replacement-verification.test.js",
+    "test:task-1-full": "npm run test:task-1-integration && npm run test:e2b-replacement",
+    "test:task-2": "npm run test:apply-ai-code-stream && npm run test:file-watcher && npm run test:path-migration && npm run test:integration-file-ops && npm run test:task-2-audit",
+    "test:task-2-audit": "npx vitest tests/task-2-coverage-audit.test.ts --run",
+    "test:apply-ai-code-stream": "npx vitest tests/apply-ai-code-stream.test.ts --run",
+    "test:file-watcher": "npx vitest tests/file-watcher.test.ts --run",
+    "test:path-migration": "npx vitest tests/path-migration.test.ts --run", 
+    "test:integration-file-ops": "npx vitest tests/integration-file-operations.test.ts --run",
+    "test:performance": "npx vitest tests/performance-benchmarks.test.ts --run",
+    "test:all": "npm run test:sandbox-manager && npm run test:vite-process-manager && npm run test:vite-process-manager-vitest && npm run test:api-create-sandbox && npm run test:api-create-sandbox-vitest && npm run test:task-1-integration && npm run test:e2b-replacement && npm run test:task-2"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.1",
@@ -48,9 +64,12 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitest/ui": "^3.2.4",
     "eslint": "^9",
     "eslint-config-next": "15.4.3",
     "tailwindcss": "^4.1.11",
-    "typescript": "^5"
+    "tsx": "^4.20.4",
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }

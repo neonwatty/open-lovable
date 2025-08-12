@@ -2,12 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Sandbox } from '@e2b/code-interpreter';
 import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { spawn } from 'child_process';
+import { setupFileWatcher } from '@/lib/file-watcher';
 
 declare global {
   var conversationState: ConversationState | null;
   var activeSandbox: any;
   var existingFiles: Set<string>;
   var sandboxState: SandboxState;
+  var sandboxWatcher: any;
 }
 
 interface ParsedResponse {
@@ -390,7 +395,7 @@ export async function POST(request: NextRequest) {
         await sendProgress({ 
           type: 'start', 
           message: 'Starting code application...',
-          totalSteps: 3
+          totalSteps: 4
         });
         
         // Step 1: Install packages
@@ -525,7 +530,7 @@ export async function POST(request: NextRequest) {
               normalizedPath = 'src/' + normalizedPath;
             }
             
-            const fullPath = `/home/user/app/${normalizedPath}`;
+            const fullPath = path.join(process.cwd(), 'sandbox', normalizedPath);
             const isUpdate = global.existingFiles.has(normalizedPath);
             
             // Remove any CSS imports from JSX/JS files (we're using Tailwind)
@@ -534,19 +539,11 @@ export async function POST(request: NextRequest) {
               fileContent = fileContent.replace(/import\s+['"]\.\/[^'"]+\.css['"];?\s*\n?/g, '');
             }
             
-            // Write the file using Python (code-interpreter SDK)
-            const escapedContent = fileContent
-              .replace(/\\/g, '\\\\')
-              .replace(/"""/g, '\\"\\"\\"')
-              .replace(/\$/g, '\\$');
-            
-            await sandboxInstance.runCode(`
-import os
-os.makedirs(os.path.dirname("${fullPath}"), exist_ok=True)
-with open("${fullPath}", 'w') as f:
-    f.write("""${escapedContent}""")
-print(f"File written: ${fullPath}")
-            `);
+            // Write the file using Node.js fs operations
+            const dirPath = path.dirname(fullPath);
+            await fs.mkdir(dirPath, { recursive: true });
+            await fs.writeFile(fullPath, fileContent, 'utf8');
+            console.log(`File written: ${fullPath}`);
             
             // Update file cache
             if (global.sandboxState?.fileCache) {
@@ -579,13 +576,36 @@ print(f"File written: ${fullPath}")
             });
           }
         }
+
+        // Set up file watching for hot reload
+        const sandboxPath = path.join(process.cwd(), 'sandbox');
+        if (filteredFiles.length > 0) {
+          await sendProgress({
+            type: 'step',
+            step: 3,
+            message: 'Setting up file watching for hot reload...'
+          });
+          
+          const watcherStarted = setupFileWatcher(sandboxPath, sendProgress);
+          if (watcherStarted) {
+            await sendProgress({
+              type: 'watch-setup',
+              message: 'File watcher started successfully'
+            });
+          } else {
+            await sendProgress({
+              type: 'warning',
+              message: 'Failed to start file watcher, continuing without hot reload'
+            });
+          }
+        }
         
-        // Step 3: Execute commands
+        // Step 4: Execute commands
         const commandsArray = Array.isArray(parsed.commands) ? parsed.commands : [];
         if (commandsArray.length > 0) {
           await sendProgress({ 
             type: 'step', 
-            step: 3,
+            step: 4,
             message: `Executing ${commandsArray.length} commands...`
           });
           
@@ -599,26 +619,49 @@ print(f"File written: ${fullPath}")
                 action: 'executing'
               });
               
-              // Use E2B commands.run() for cleaner execution
-              const result = await sandboxInstance.commands.run(cmd, {
-                cwd: '/home/user/app',
-                timeout: 60,
-                on_stdout: async (data: string) => {
+              // Execute commands in local sandbox directory using Node.js child_process
+              const sandboxPath = path.join(process.cwd(), 'sandbox');
+              
+              const result = await new Promise<{ exitCode: number }>((resolve, reject) => {
+                const child = spawn('sh', ['-c', cmd], {
+                  cwd: sandboxPath,
+                  stdio: ['pipe', 'pipe', 'pipe']
+                });
+                
+                let exitCode = 0;
+                
+                child.stdout.on('data', async (data: Buffer) => {
                   await sendProgress({
                     type: 'command-output',
                     command: cmd,
-                    output: data,
+                    output: data.toString(),
                     stream: 'stdout'
                   });
-                },
-                on_stderr: async (data: string) => {
+                });
+                
+                child.stderr.on('data', async (data: Buffer) => {
                   await sendProgress({
                     type: 'command-output',
                     command: cmd,
-                    output: data,
+                    output: data.toString(),
                     stream: 'stderr'
                   });
-                }
+                });
+                
+                child.on('close', (code) => {
+                  exitCode = code || 0;
+                  resolve({ exitCode });
+                });
+                
+                child.on('error', (error) => {
+                  reject(error);
+                });
+                
+                // Set timeout
+                setTimeout(() => {
+                  child.kill();
+                  reject(new Error('Command timeout'));
+                }, 60000);
               });
               
               if (results.commandsExecuted) {
