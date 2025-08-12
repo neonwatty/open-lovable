@@ -1,0 +1,31 @@
+# Task ID: 7
+# Title: Update Environment Configuration
+# Status: pending
+# Dependencies: 6
+# Priority: low
+# Description: Modify environment variables and configuration for local operation
+# Details:
+Update config/app.config.ts to remove AI provider configurations and E2B settings. Add LOCAL_SANDBOX_PATH=./sandbox and VITE_PORT=5173 environment variables. Update .env.example to reflect new local-only setup. Remove E2B_API_KEY, FIRECRAWL_API_KEY, and AI provider API keys from environment requirements. Update model configurations to reflect Claude Code-only operation.
+
+# Test Strategy:
+Verify application startup with new configuration. Test local sandbox path resolution and Vite port configuration
+
+# Subtasks:
+## 1. Remove External Service Configurations from app.config.ts [pending]
+### Dependencies: None
+### Description: Clean up config/app.config.ts by removing all E2B and AI provider related configurations
+### Details:
+Remove E2B configuration objects including sandbox settings, timeout values, and template configurations. Remove AI provider configurations for Anthropic, OpenAI, and Groq. Remove defaultModel and modelConfig sections. Keep only local development related settings like port configurations and basic app metadata.
+
+## 2. Add Local Environment Variables and Update Configuration [pending]
+### Dependencies: 7.1
+### Description: Add new local sandbox path and Vite port environment variables to the configuration
+### Details:
+Add LOCAL_SANDBOX_PATH configuration defaulting to './sandbox'. Add VITE_PORT configuration defaulting to 5173. Update any existing configuration to use these new environment variables. Ensure proper type definitions for the new configuration structure. Update any configuration exports to reflect the simplified local-only setup.
+
+## 3. Update .env.example and Remove API Key Requirements [pending]
+### Dependencies: 7.2
+### Description: Update environment variable documentation to reflect local-only operation
+### Details:
+Remove E2B_API_KEY, FIRECRAWL_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, and GROQ_API_KEY from .env.example. Add LOCAL_SANDBOX_PATH=./sandbox and VITE_PORT=5173 to .env.example with appropriate comments. Update any README or documentation that references these environment variables. Ensure all environment variable references in the codebase are updated accordingly.
+

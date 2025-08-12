@@ -1,0 +1,49 @@
+# Task ID: 2
+# Title: Update File Operations API
+# Status: pending
+# Dependencies: 1
+# Priority: high
+# Description: Replace E2B Python-based file operations with Node.js filesystem operations
+# Details:
+Modify /app/api/apply-ai-code-stream/route.ts to replace sandbox.runCode() Python calls with direct Node.js fs.writeFile, fs.mkdir operations. Write files directly to sandbox/ directory instead of remote E2B container. Implement file watching for hot reload using fs.watch. Update all file path references from /home/user/app/ to ./sandbox/
+
+# Test Strategy:
+Test file creation, modification, and deletion in local sandbox directory. Verify hot reload functionality and proper file path resolution
+
+# Subtasks:
+## 1. Replace Python runCode() calls with Node.js fs operations [pending]
+### Dependencies: None
+### Description: Identify and replace all instances of sandbox.runCode() that perform file operations with corresponding Node.js fs module methods
+### Details:
+Scan through /app/api/apply-ai-code-stream/route.ts to find all sandbox.runCode() calls that write files, create directories, or manipulate the filesystem. Replace Python-based file operations with fs.writeFile(), fs.mkdir(), fs.rmdir(), and other fs module methods. Ensure proper async/await handling and error management for each replacement.
+
+## 2. Implement direct file writing to local sandbox directory [pending]
+### Dependencies: 2.1
+### Description: Set up file writing logic to save files directly to the ./sandbox directory instead of remote E2B container
+### Details:
+Create helper functions for file operations that write directly to ./sandbox directory. Implement proper directory structure creation using fs.mkdir with recursive option. Add validation to ensure sandbox directory exists before writing. Handle file paths safely to prevent writing outside sandbox directory.
+
+## 3. Set up file watching with fs.watch for hot reload [pending]
+### Dependencies: 2.2
+### Description: Implement file system watching to trigger hot reload when files change in the sandbox directory
+### Details:
+Add fs.watch() or chokidar to monitor changes in ./sandbox directory. Create event handlers for file additions, modifications, and deletions. Implement debouncing to prevent excessive reload triggers. Connect file watching events to Vite's hot reload mechanism via WebSocket or appropriate API.
+
+## 4. Update file path references from /home/user/app to ./sandbox [pending]
+### Dependencies: 2.2
+### Description: Replace all hardcoded E2B container paths with local sandbox directory paths throughout the codebase
+### Details:
+Search and replace all instances of '/home/user/app/' with './sandbox/' in apply-ai-code-stream/route.ts. Update path construction logic to use path.join() for proper cross-platform compatibility. Modify any path normalization or validation functions to work with local paths. Update relative path calculations if needed.
+
+## 5. Handle file content escaping and encoding properly [pending]
+### Dependencies: 2.1, 2.2
+### Description: Ensure proper handling of file content encoding, escaping, and special characters when writing files locally
+### Details:
+Review and update content parsing logic to handle different file formats (JSON, JavaScript, TypeScript, CSS, etc.). Implement proper UTF-8 encoding for all file writes. Remove Python-specific escaping that was needed for runCode() calls. Add proper handling for binary files if applicable. Ensure special characters in file content don't break the file writing process.
+
+## 6. Update global file tracking and caching mechanisms [pending]
+### Dependencies: 2.2, 2.3, 2.4
+### Description: Modify file tracking systems to work with local filesystem instead of remote E2B container state
+### Details:
+Update the global files tracking (globalFiles variable) to reflect local filesystem state. Modify caching logic to work with local file timestamps and checksums. Update file existence checks to use fs.existsSync() or fs.access(). Ensure proper synchronization between tracked files and actual filesystem state. Update any file indexing or searching functionality to work locally.
+

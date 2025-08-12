@@ -1,0 +1,43 @@
+# Task ID: 1
+# Title: Create Local Sandbox Infrastructure
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Replace E2B sandbox creation with local sandbox directory and Vite process management
+# Details:
+Replace /app/api/create-ai-sandbox/route.ts to use Node.js fs operations instead of E2B SDK. Create local sandbox/ directory structure, initialize React + Vite + Tailwind project locally using child_process.spawn() for npm commands. Return localhost:5173 as preview URL instead of E2B sandbox URL. Remove E2B SDK imports and dependencies.
+
+# Test Strategy:
+Verify local sandbox directory creation, npm install execution, Vite server startup on port 5173, and accessible preview URL
+
+# Subtasks:
+## 1. Set up local sandbox directory structure and filesystem operations [pending]
+### Dependencies: None
+### Description: Create the local sandbox directory structure and implement all filesystem operations needed to replace E2B's remote file system
+### Details:
+Create a ./sandbox directory in the project root if it doesn't exist. Implement utility functions for creating, reading, updating, and deleting files and directories using Node.js fs module. Ensure proper error handling for filesystem operations. Set up proper permissions and cleanup mechanisms for the sandbox directory. Create a sandboxManager module to centralize all filesystem operations.
+
+## 2. Implement Vite process spawning and lifecycle management [pending]
+### Dependencies: 1.1
+### Description: Create a robust system for spawning and managing the Vite development server process using Node.js child_process
+### Details:
+Implement ViteProcessManager class using child_process.spawn() to start the Vite dev server. Handle process stdout/stderr streams for logging and debugging. Implement graceful shutdown and cleanup when the process is terminated. Add process health checking and automatic restart capabilities. Ensure the Vite process is properly killed when the parent process exits.
+
+## 3. Initialize React + Vite + Tailwind project locally [pending]
+### Dependencies: 1.1, 1.2
+### Description: Implement the project initialization logic to create a new React application with Vite and Tailwind CSS in the local sandbox
+### Details:
+Create project initialization function that runs npm create vite@latest with React template. Implement Tailwind CSS installation via npm commands. Configure vite.config.js and tailwind.config.js programmatically. Set up the base project structure including src/App.tsx, src/main.tsx, and src/index.css. Ensure all dependencies are installed via npm install command execution.
+
+## 4. Manage sandbox state and implement global variable system [pending]
+### Dependencies: 1.1, 1.2, 1.3
+### Description: Create a state management system to track sandbox instances and replace E2B's global variables
+### Details:
+Implement SandboxState class to track active sandbox instances, their process IDs, and port assignments. Create global variable management to replace E2B's GLOBALS system. Store sandbox metadata including creation time, last modified time, and current status. Implement sandbox ID generation and tracking. Create methods for retrieving sandbox state by ID.
+
+## 5. Update API route and configure localhost preview URL routing [pending]
+### Dependencies: 1.1, 1.2, 1.3, 1.4
+### Description: Modify the create-ai-sandbox API route to use the new local infrastructure and return localhost URLs
+### Details:
+Refactor /app/api/create-ai-sandbox/route.ts to remove all E2B SDK imports and references. Update the POST handler to use the new local sandbox creation logic. Configure the response to return localhost:5173 as the preview URL instead of E2B's getHost(5173). Update error handling to work with local filesystem and process errors. Ensure the API maintains the same interface for frontend compatibility.
+

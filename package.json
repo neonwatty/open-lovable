@@ -24,7 +24,7 @@
     "test:task-2-audit": "npx vitest tests/task-2-coverage-audit.test.ts --run",
     "test:apply-ai-code-stream": "npx vitest tests/apply-ai-code-stream.test.ts --run",
     "test:file-watcher": "npx vitest tests/file-watcher.test.ts --run",
-    "test:path-migration": "npx vitest tests/path-migration.test.ts --run", 
+    "test:path-migration": "npx vitest tests/path-migration.test.ts --run",
     "test:integration-file-ops": "npx vitest tests/integration-file-operations.test.ts --run",
     "test:performance": "npx vitest tests/performance-benchmarks.test.ts --run",
     "test:all": "npm run test:sandbox-manager && npm run test:vite-process-manager && npm run test:vite-process-manager-vitest && npm run test:api-create-sandbox && npm run test:api-create-sandbox-vitest && npm run test:task-1-integration && npm run test:e2b-replacement && npm run test:task-2"
@@ -40,6 +40,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "ai": "^5.0.0",
     "autoprefixer": "^10.4.21",
+    "cheerio": "^1.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cors": "^2.8.5",

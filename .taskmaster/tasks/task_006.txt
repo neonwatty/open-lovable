@@ -1,0 +1,25 @@
+# Task ID: 6
+# Title: Update Package Dependencies
+# Status: pending
+# Dependencies: 3
+# Priority: medium
+# Description: Remove external service dependencies and add local processing libraries
+# Details:
+Update package.json to remove: @e2b/code-interpreter, e2b, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/openai, ai (Vercel AI SDK). Add: cheerio for HTML parsing. Update package-lock.json accordingly. Ensure all remaining dependencies are compatible with local-only operation.
+
+# Test Strategy:
+Run npm install to verify dependency resolution. Test application startup without external API dependencies. Verify cheerio HTML parsing functionality
+
+# Subtasks:
+## 1. Remove E2B and AI SDK packages [pending]
+### Dependencies: None
+### Description: Remove all external service dependencies from package.json including E2B packages and Vercel AI SDK packages
+### Details:
+Edit package.json to remove the following packages: @e2b/code-interpreter, e2b, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/openai, and ai (Vercel AI SDK). After removing these dependencies from package.json, run npm uninstall for each package to ensure they are completely removed from node_modules and package-lock.json is updated correctly.
+
+## 2. Add cheerio and verify local dependencies [pending]
+### Dependencies: 6.1
+### Description: Add cheerio for HTML parsing and ensure all remaining dependencies are compatible with local-only operation
+### Details:
+Run npm install cheerio to add the HTML parsing library. After installation, run npm install to regenerate package-lock.json with the updated dependency tree. Test the application startup to verify no breaking changes from removed dependencies. Check that all remaining packages in package.json are compatible with local operation and don't require external API services.
+

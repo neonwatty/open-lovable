@@ -1,0 +1,11 @@
+# Task ID: 5
+# Title: Update Sandbox Management APIs
+# Status: pending
+# Dependencies: 1, 2
+# Priority: medium
+# Description: Modify sandbox control endpoints to manage local processes instead of E2B containers
+# Details:
+Update /app/api/kill-sandbox/route.ts to kill local Vite process using process.kill(). Modify /app/api/restart-vite/route.ts to restart local Vite server. Update /app/api/sandbox-status/route.ts to check local process status. Modify /app/api/run-command/route.ts to execute commands locally via child_process. Replace all E2B-specific process management with Node.js process control.
+
+# Test Strategy:
+Test process lifecycle management: start, stop, restart, and status checking of local Vite server. Verify command execution in local environment

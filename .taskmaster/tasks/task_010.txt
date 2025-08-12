@@ -1,0 +1,37 @@
+# Task ID: 10
+# Title: Comprehensive Testing and Documentation
+# Status: pending
+# Dependencies: 7, 8, 9
+# Priority: medium
+# Description: Test complete local workflow and update documentation
+# Details:
+Perform end-to-end testing of local-only workflow: sandbox creation, file operations, web scraping, code generation, and preview. Update README.md and CLAUDE.md with new local setup instructions. Remove references to external API requirements. Create troubleshooting guide for common local development issues. Test cross-platform compatibility (Windows/Mac/Linux).
+
+# Test Strategy:
+Execute complete user workflow from project initialization to code generation and preview. Verify documentation accuracy and completeness. Test on multiple operating systems
+
+# Subtasks:
+## 1. Create end-to-end test suite for local workflow [pending]
+### Dependencies: None
+### Description: Develop comprehensive test suite covering the entire local development workflow from project initialization through code generation and preview
+### Details:
+Create test suite that validates: project initialization with local sandbox creation, file operations (create/modify/delete) in sandbox/ directory, markdown prompt generation for Claude Code, code generation and parsing workflow, local Vite server startup and hot reload, web scraping integration if applicable. Include both unit tests for individual components and integration tests for complete user workflows. Ensure tests cover error scenarios and edge cases.
+
+## 2. Update README.md with local setup instructions [pending]
+### Dependencies: None
+### Description: Rewrite README.md to reflect the new local-only development workflow and remove all references to external API requirements
+### Details:
+Update project overview to describe local Claude Code integration. Replace API key setup section with Claude Code installation instructions. Document new local workflow: how to start the application, how code generation works with Claude Code, how the local sandbox operates. Remove all references to E2B, Firecrawl API keys, and cloud AI providers. Add clear step-by-step setup guide for first-time users. Include system requirements and prerequisites (Node.js version, Claude Code CLI).
+
+## 3. Update CLAUDE.md with new workflow documentation [pending]
+### Dependencies: None
+### Description: Revise CLAUDE.md to document the new local development workflow and provide guidance for Claude Code interactions
+### Details:
+Update architecture section to reflect local-only components. Document new API routes behavior without external services. Explain how Claude Code should interpret and process markdown prompts from the application. Add examples of expected code generation formats and responses. Update development commands section with local testing and debugging instructions. Include guidelines for Claude Code to handle file operations in sandbox/ directory. Document the local Vite server integration and preview workflow.
+
+## 4. Test cross-platform compatibility and create troubleshooting guide [pending]
+### Dependencies: 10.1
+### Description: Validate application functionality across Windows, Mac, and Linux platforms and document common issues with solutions
+### Details:
+Test complete workflow on Windows (PowerShell/CMD), macOS (Terminal), and Linux (Ubuntu/Debian). Document platform-specific issues: file path differences, permission requirements, process management variations. Create troubleshooting guide covering: port conflicts resolution, file permission errors, Node.js version compatibility, Claude Code CLI installation issues, local server startup problems. Include debug commands and diagnostic steps. Add FAQ section for common user questions. Ensure guide covers recovery procedures for corrupted sandbox states.
+

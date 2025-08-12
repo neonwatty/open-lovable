@@ -1,0 +1,93 @@
+{
+	"meta": {
+		"generatedAt": "2025-08-12T13:04:14.263Z",
+		"tasksAnalyzed": 10,
+		"totalTasks": 10,
+		"analysisCount": 10,
+		"thresholdScore": 5,
+		"projectName": "Taskmaster",
+		"usedResearch": true
+	},
+	"complexityAnalysis": [
+		{
+			"taskId": 1,
+			"taskTitle": "Create Local Sandbox Infrastructure",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down the local sandbox infrastructure creation into: 1) Setting up local directory structure and managing filesystem operations, 2) Implementing Vite process spawning and management, 3) Initializing React + Vite + Tailwind project locally, 4) Managing sandbox state and global variables, 5) Updating preview URL routing to localhost:5173",
+			"reasoning": "This task requires replacing the entire E2B sandbox creation flow (365 lines) with local Node.js filesystem and process management. It involves significant refactoring of the sandbox initialization logic, managing child processes, and handling state management. The complexity is moderate as the patterns exist but need translation from E2B to local operations."
+		},
+		{
+			"taskId": 2,
+			"taskTitle": "Update File Operations API",
+			"complexityScore": 7,
+			"recommendedSubtasks": 6,
+			"expansionPrompt": "Break down file operations updates into: 1) Replace Python-based runCode() calls with Node.js fs operations, 2) Implement direct file writing to local sandbox directory, 3) Set up file watching with fs.watch for hot reload, 4) Update all file path references from /home/user/app to ./sandbox, 5) Handle file content escaping and encoding properly, 6) Update global file tracking and caching mechanisms",
+			"reasoning": "The apply-ai-code-stream route is complex (707 lines) with extensive file parsing, package detection, and streaming responses. It requires replacing all E2B sandbox.runCode() Python calls with Node.js fs operations while maintaining the streaming interface and progress reporting. The file content parsing logic is intricate with multiple formats supported."
+		},
+		{
+			"taskId": 3,
+			"taskTitle": "Replace Firecrawl with Local Web Scraping",
+			"complexityScore": 4,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down web scraping replacement into: 1) Implement fetch-based HTML retrieval with proper error handling, 2) Add cheerio for HTML parsing and text extraction with metadata, 3) Maintain API interface compatibility and sanitization functions",
+			"reasoning": "This is a relatively straightforward replacement of the Firecrawl API (117 lines) with local scraping. The existing sanitizeQuotes function can be preserved, and the main work is implementing fetch + cheerio to extract content while maintaining the same response format."
+		},
+		{
+			"taskId": 4,
+			"taskTitle": "Create Claude Code Integration Bridge",
+			"complexityScore": 8,
+			"recommendedSubtasks": 7,
+			"expansionPrompt": "Break down Claude Code integration into: 1) Remove all AI SDK imports and dependencies, 2) Design markdown-based prompt formatting system for Claude Code, 3) Implement code generation response parsing for Claude Code format, 4) Maintain streaming response compatibility with frontend, 5) Handle conversation context and state management, 6) Implement user preference analysis without AI SDKs, 7) Create fallback mechanisms for AI unavailability",
+			"reasoning": "The generate-ai-code-stream route is highly complex with multiple AI provider integrations, context management, file selection logic, and streaming responses. Replacing this with a Claude Code-compatible interface requires significant architectural changes while maintaining all the sophisticated context handling and streaming functionality."
+		},
+		{
+			"taskId": 5,
+			"taskTitle": "Update Sandbox Management APIs",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down sandbox management updates into: 1) Implement local process killing with process.kill(), 2) Update Vite restart logic for local processes, 3) Implement local process status checking, 4) Modify command execution to use child_process locally",
+			"reasoning": "These routes (kill-sandbox, restart-vite, etc.) need conversion from E2B process management to local Node.js process control. The restart-vite route has complex Python monitoring logic (136 lines) that needs translation to Node.js. Process lifecycle management requires careful handling of PIDs and cleanup."
+		},
+		{
+			"taskId": 6,
+			"taskTitle": "Update Package Dependencies",
+			"complexityScore": 2,
+			"recommendedSubtasks": 2,
+			"expansionPrompt": "Break down dependency updates into: 1) Remove E2B and AI SDK packages from package.json, 2) Add cheerio and verify all remaining dependencies work locally",
+			"reasoning": "This is a simple package.json modification task. The main work is removing specific packages and adding cheerio. Testing will be needed to ensure no breaking changes, but the actual implementation is straightforward."
+		},
+		{
+			"taskId": 7,
+			"taskTitle": "Update Environment Configuration",
+			"complexityScore": 3,
+			"recommendedSubtasks": 3,
+			"expansionPrompt": "Break down configuration updates into: 1) Modify app.config.ts to remove external service settings, 2) Add local sandbox path and port environment variables, 3) Update .env.example and remove API key requirements",
+			"reasoning": "The config file (163 lines) needs updates to remove E2B and AI provider configurations. This involves straightforward modifications to configuration objects and updating environment variable documentation."
+		},
+		{
+			"taskId": 8,
+			"taskTitle": "Update Frontend Components",
+			"complexityScore": 4,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down frontend updates into: 1) Hardcode or remove AI model selector to show 'Claude Code', 2) Update iframe preview URL to localhost:5173, 3) Modify error handling for local server issues, 4) Add local server status indicators",
+			"reasoning": "The page.tsx component is large with complex state management. Updates needed include changing the model selector, updating preview URLs, and modifying error handling. The existing structure can mostly be preserved with targeted modifications."
+		},
+		{
+			"taskId": 9,
+			"taskTitle": "Implement Local Process Management",
+			"complexityScore": 6,
+			"recommendedSubtasks": 5,
+			"expansionPrompt": "Break down process management into: 1) Create process management utility module, 2) Implement cleanup handlers for application shutdown, 3) Add port conflict detection and resolution, 4) Implement robust error handling for filesystem operations, 5) Add process monitoring and auto-restart capabilities",
+			"reasoning": "This requires creating new utilities for managing local Node.js processes robustly. It involves handling edge cases like port conflicts, process crashes, and cleanup on shutdown. The implementation needs to be reliable across different operating systems."
+		},
+		{
+			"taskId": 10,
+			"taskTitle": "Comprehensive Testing and Documentation",
+			"complexityScore": 5,
+			"recommendedSubtasks": 4,
+			"expansionPrompt": "Break down testing and documentation into: 1) Create end-to-end test suite for local workflow, 2) Update README.md with local setup instructions, 3) Update CLAUDE.md with new workflow documentation, 4) Test cross-platform compatibility and create troubleshooting guide",
+			"reasoning": "This involves comprehensive testing of the entire converted application and updating all documentation. While not technically complex, it requires thorough testing across different scenarios and platforms, plus clear documentation updates."
+		}
+	]
+}

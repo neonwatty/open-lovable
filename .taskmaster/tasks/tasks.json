@@ -1,0 +1,566 @@
+{
+  "master": {
+    "tasks": [
+      {
+        "id": 1,
+        "title": "Create Local Sandbox Infrastructure",
+        "description": "Replace E2B sandbox creation with local sandbox directory and Vite process management",
+        "details": "Replace /app/api/create-ai-sandbox/route.ts to use Node.js fs operations instead of E2B SDK. Create local sandbox/ directory structure, initialize React + Vite + Tailwind project locally using child_process.spawn() for npm commands. Return localhost:5173 as preview URL instead of E2B sandbox URL. Remove E2B SDK imports and dependencies.",
+        "testStrategy": "Verify local sandbox directory creation, npm install execution, Vite server startup on port 5173, and accessible preview URL",
+        "priority": "high",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Set up local sandbox directory structure and filesystem operations",
+            "description": "Create the local sandbox directory structure and implement all filesystem operations needed to replace E2B's remote file system",
+            "dependencies": [],
+            "details": "Create a ./sandbox directory in the project root if it doesn't exist. Implement utility functions for creating, reading, updating, and deleting files and directories using Node.js fs module. Ensure proper error handling for filesystem operations. Set up proper permissions and cleanup mechanisms for the sandbox directory. Create a sandboxManager module to centralize all filesystem operations.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement Vite process spawning and lifecycle management",
+            "description": "Create a robust system for spawning and managing the Vite development server process using Node.js child_process",
+            "dependencies": [
+              "1.1"
+            ],
+            "details": "Implement ViteProcessManager class using child_process.spawn() to start the Vite dev server. Handle process stdout/stderr streams for logging and debugging. Implement graceful shutdown and cleanup when the process is terminated. Add process health checking and automatic restart capabilities. Ensure the Vite process is properly killed when the parent process exits.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Initialize React + Vite + Tailwind project locally",
+            "description": "Implement the project initialization logic to create a new React application with Vite and Tailwind CSS in the local sandbox",
+            "dependencies": [
+              "1.1",
+              "1.2"
+            ],
+            "details": "Create project initialization function that runs npm create vite@latest with React template. Implement Tailwind CSS installation via npm commands. Configure vite.config.js and tailwind.config.js programmatically. Set up the base project structure including src/App.tsx, src/main.tsx, and src/index.css. Ensure all dependencies are installed via npm install command execution.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Manage sandbox state and implement global variable system",
+            "description": "Create a state management system to track sandbox instances and replace E2B's global variables",
+            "dependencies": [
+              "1.1",
+              "1.2",
+              "1.3"
+            ],
+            "details": "Implement SandboxState class to track active sandbox instances, their process IDs, and port assignments. Create global variable management to replace E2B's GLOBALS system. Store sandbox metadata including creation time, last modified time, and current status. Implement sandbox ID generation and tracking. Create methods for retrieving sandbox state by ID.\n<info added on 2025-08-12T13:51:35.938Z>\nAnalysis complete. Specific SandboxStateManager implementation needed with:\n\n1. Class structure supporting multiple sandbox instances with unique ID management\n2. Per-instance variable storage system replacing E2B GLOBALS (activeSandbox, sandboxData, existingFiles, sandboxState)\n3. Lifecycle state tracking (created/running/stopped/destroyed) with timestamps\n4. File tracking and caching system per sandbox instance\n5. Integration points with existing sandboxManager and viteProcessManager\n\nImplementation plan:\n- Create lib/sandbox/SandboxStateManager.ts class\n- Extend existing sandbox types in types/ directory\n- Add global variable storage/retrieval methods per sandbox\n- Update sandboxManager integration to use state tracking\n- Modify API routes to leverage new state management system\n\nKey methods needed: createSandbox(), getSandboxState(), setSandboxVariable(), getSandboxVariable(), updateSandboxStatus(), destroySandbox(), listActiveSandboxes()\n</info added on 2025-08-12T13:51:35.938Z>\n<info added on 2025-08-12T15:05:54.248Z>\nIMPLEMENTATION COMPLETED: Successfully delivered comprehensive SandboxStateManager system with complete feature set:\n\n- SandboxStateManager class with full lifecycle management (created, getSandboxInstance, destroySandbox)\n- Multi-sandbox tracking with unique ID generation and management\n- Complete global variable storage system (setSandboxVariable/getSandboxVariable) replacing E2B GLOBALS\n- Per-sandbox file tracking system (addTrackedFile/isFileTracked) replacing global.existingFiles\n- Advanced file caching system (updateFileCache/getCachedFileContent) replacing global.sandboxState.fileCache\n- Active sandbox management replacing global.activeSandbox pattern\n- Integrated Vite process management with status tracking\n- Automatic cleanup mechanisms for idle sandboxes\n- Event-driven monitoring architecture with comprehensive statistics\n- Complete TypeScript integration with backward compatibility\n- Singleton pattern implementation for global access across application\n- Full test suite coverage with API documentation\n- Ready for immediate integration into existing API routes\n\nSystem successfully replaces all E2B global variable patterns and provides superior local sandbox state management capabilities.\n</info added on 2025-08-12T15:05:54.248Z>",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Update API route and configure localhost preview URL routing",
+            "description": "Modify the create-ai-sandbox API route to use the new local infrastructure and return localhost URLs",
+            "dependencies": [
+              "1.1",
+              "1.2",
+              "1.3",
+              "1.4"
+            ],
+            "details": "Refactor /app/api/create-ai-sandbox/route.ts to remove all E2B SDK imports and references. Update the POST handler to use the new local sandbox creation logic. Configure the response to return localhost:5173 as the preview URL instead of E2B's getHost(5173). Update error handling to work with local filesystem and process errors. Ensure the API maintains the same interface for frontend compatibility.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Update File Operations API",
+        "description": "Replace E2B Python-based file operations with Node.js filesystem operations",
+        "details": "Modify /app/api/apply-ai-code-stream/route.ts to replace sandbox.runCode() Python calls with direct Node.js fs.writeFile, fs.mkdir operations. Write files directly to sandbox/ directory instead of remote E2B container. Implement file watching for hot reload using fs.watch. Update all file path references from /home/user/app/ to ./sandbox/",
+        "testStrategy": "Test file creation, modification, and deletion in local sandbox directory. Verify hot reload functionality and proper file path resolution",
+        "priority": "high",
+        "dependencies": [
+          1
+        ],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Replace Python runCode() calls with Node.js fs operations",
+            "description": "Identify and replace all instances of sandbox.runCode() that perform file operations with corresponding Node.js fs module methods",
+            "dependencies": [],
+            "details": "Scan through /app/api/apply-ai-code-stream/route.ts to find all sandbox.runCode() calls that write files, create directories, or manipulate the filesystem. Replace Python-based file operations with fs.writeFile(), fs.mkdir(), fs.rmdir(), and other fs module methods. Ensure proper async/await handling and error management for each replacement.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement direct file writing to local sandbox directory",
+            "description": "Set up file writing logic to save files directly to the ./sandbox directory instead of remote E2B container",
+            "dependencies": [
+              "2.1"
+            ],
+            "details": "Create helper functions for file operations that write directly to ./sandbox directory. Implement proper directory structure creation using fs.mkdir with recursive option. Add validation to ensure sandbox directory exists before writing. Handle file paths safely to prevent writing outside sandbox directory.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Set up file watching with fs.watch for hot reload",
+            "description": "Implement file system watching to trigger hot reload when files change in the sandbox directory",
+            "dependencies": [
+              "2.2"
+            ],
+            "details": "Add fs.watch() or chokidar to monitor changes in ./sandbox directory. Create event handlers for file additions, modifications, and deletions. Implement debouncing to prevent excessive reload triggers. Connect file watching events to Vite's hot reload mechanism via WebSocket or appropriate API.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Update file path references from /home/user/app to ./sandbox",
+            "description": "Replace all hardcoded E2B container paths with local sandbox directory paths throughout the codebase",
+            "dependencies": [
+              "2.2"
+            ],
+            "details": "Search and replace all instances of '/home/user/app/' with './sandbox/' in apply-ai-code-stream/route.ts. Update path construction logic to use path.join() for proper cross-platform compatibility. Modify any path normalization or validation functions to work with local paths. Update relative path calculations if needed.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Handle file content escaping and encoding properly",
+            "description": "Ensure proper handling of file content encoding, escaping, and special characters when writing files locally",
+            "dependencies": [
+              "2.1",
+              "2.2"
+            ],
+            "details": "Review and update content parsing logic to handle different file formats (JSON, JavaScript, TypeScript, CSS, etc.). Implement proper UTF-8 encoding for all file writes. Remove Python-specific escaping that was needed for runCode() calls. Add proper handling for binary files if applicable. Ensure special characters in file content don't break the file writing process.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Update global file tracking and caching mechanisms",
+            "description": "Modify file tracking systems to work with local filesystem instead of remote E2B container state",
+            "dependencies": [
+              "2.2",
+              "2.3",
+              "2.4"
+            ],
+            "details": "Update the global files tracking (globalFiles variable) to reflect local filesystem state. Modify caching logic to work with local file timestamps and checksums. Update file existence checks to use fs.existsSync() or fs.access(). Ensure proper synchronization between tracked files and actual filesystem state. Update any file indexing or searching functionality to work locally.",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Replace Firecrawl with Local Web Scraping",
+        "description": "Implement local web scraping solution to replace Firecrawl API dependency",
+        "details": "Update /app/api/scrape-url-enhanced/route.ts to remove Firecrawl API calls. Implement Option A: simple fetch-based scraping with cheerio for HTML parsing and text extraction. Add cheerio dependency to package.json. Maintain same API interface but use local scraping instead of external service. Preserve sanitizeQuotes function for consistent output.",
+        "testStrategy": "Test scraping various websites, verify HTML parsing, text extraction, and metadata retrieval. Ensure output format matches existing Firecrawl interface",
+        "priority": "medium",
+        "dependencies": [],
+        "status": "done",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Implement fetch-based HTML retrieval with error handling",
+            "description": "Replace Firecrawl API calls with native fetch implementation for retrieving HTML content from URLs",
+            "dependencies": [],
+            "details": "Implement a robust fetch-based HTML retrieval system in /app/api/scrape-url-enhanced/route.ts. Add proper error handling for network failures, timeouts, and invalid URLs. Include support for following redirects, handling different response types (HTML, JSON, text), and setting appropriate headers (User-Agent, Accept). Implement timeout mechanism (default 30 seconds) and retry logic for failed requests. Handle edge cases like non-200 status codes, empty responses, and malformed URLs.",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Add cheerio for HTML parsing and metadata extraction",
+            "description": "Integrate cheerio library for parsing HTML and extracting text content and metadata",
+            "dependencies": [
+              "3.1"
+            ],
+            "details": "Install cheerio dependency via npm and integrate it into the scraping route. Implement HTML parsing to extract main content text, page title, meta description, Open Graph tags, and other relevant metadata. Create content extraction logic that removes script tags, style tags, and other non-content elements. Implement intelligent text extraction that preserves structure (paragraphs, headings) while removing unnecessary HTML. Extract and format metadata into the same structure currently returned by Firecrawl (title, description, content fields).",
+            "status": "done",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Maintain API interface compatibility and sanitization",
+            "description": "Ensure the new local scraping implementation maintains full compatibility with existing API interface",
+            "dependencies": [
+              "3.1",
+              "3.2"
+            ],
+            "details": "Preserve the existing API response format to ensure frontend compatibility. Keep the sanitizeQuotes function intact and apply it to all scraped content. Maintain the same error response structure and status codes. Ensure the response includes all fields currently expected by consumers (content, metadata, success status). Add comprehensive error messages that match the existing pattern. Test the implementation against various website types to ensure consistent output format. Document any limitations compared to Firecrawl (e.g., JavaScript-rendered content).",
+            "status": "done",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Create Claude Code Integration Bridge",
+        "description": "Replace AI SDK integrations with Claude Code-compatible interface",
+        "details": "Modify /app/api/generate-ai-code-stream/route.ts to remove all AI SDK imports (@ai-sdk/groq, @ai-sdk/anthropic, @ai-sdk/openai). Create new interface that formats prompts for Claude Code consumption. Implement markdown-based code generation format parsing. Create system that outputs structured prompts that Claude Code can process. Maintain streaming response format for frontend compatibility.",
+        "testStrategy": "Verify prompt formatting, code generation structure, and streaming response compatibility with existing frontend components",
+        "priority": "high",
+        "dependencies": [],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Remove all AI SDK imports and dependencies",
+            "description": "Clean up /app/api/generate-ai-code-stream/route.ts by removing all AI SDK imports",
+            "dependencies": [],
+            "details": "Remove imports for @ai-sdk/groq, @ai-sdk/anthropic, @ai-sdk/openai, and any related AI SDK dependencies. Comment out or temporarily stub any code that directly uses these SDKs. Update package.json to remove these dependencies. Ensure the file still compiles without errors by adding temporary placeholder functions where needed.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Design markdown-based prompt formatting system",
+            "description": "Create a system to format prompts in markdown structure for Claude Code consumption",
+            "dependencies": [
+              "4.1"
+            ],
+            "details": "Design a markdown template structure that includes system prompts, user messages, code context, and file contents. Create utility functions to format conversation history, scraped website content, and selected files into structured markdown. Define clear section headers and delimiters for different types of context (e.g., '## User Request', '## Code Context', '## File Contents'). Ensure the format is compatible with Claude Code's expected input structure.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Implement code generation response parsing",
+            "description": "Create parser for Claude Code's markdown-based code generation format",
+            "dependencies": [
+              "4.2"
+            ],
+            "details": "Build a parser that extracts code blocks, file paths, and operation types from Claude Code's markdown responses. Implement regex patterns to identify code fence blocks with language identifiers. Extract file creation, modification, and deletion instructions from the response. Parse any additional metadata or instructions embedded in the markdown. Create data structures to hold parsed code and file operations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Maintain streaming response compatibility",
+            "description": "Ensure the new system maintains compatibility with frontend streaming expectations",
+            "dependencies": [
+              "4.3"
+            ],
+            "details": "Implement a streaming interface that mimics the existing AI SDK streaming format. Create a transform stream that converts Claude Code's output into the expected frontend format. Maintain the same event structure and data format that the frontend CodeApplicationProgress component expects. Implement buffering and chunking to ensure smooth streaming. Test with existing frontend components to verify compatibility.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Handle conversation context and state management",
+            "description": "Implement context management without relying on AI SDK's built-in features",
+            "dependencies": [
+              "4.2",
+              "4.4"
+            ],
+            "details": "Create a context manager that tracks conversation history, generated components, and scraped websites. Implement memory management to handle context window limitations. Build functions to intelligently select and prioritize relevant context based on user queries. Maintain the existing context selection logic from lib/context/context-selector.ts. Store and retrieve conversation state between requests.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 6,
+            "title": "Implement user preference analysis without AI SDKs",
+            "description": "Replace AI-based preference analysis with rule-based or pattern matching system",
+            "dependencies": [
+              "4.5"
+            ],
+            "details": "Analyze the existing analyzeUserIntent and analyzePromptForRelevance functions. Create pattern matching rules to identify user intents (update, add feature, fix issue, etc.). Implement keyword-based relevance scoring for file and context selection. Build heuristics to determine which files and components are relevant to user requests. Maintain compatibility with the existing EditIntentType and relevance scoring interfaces.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 7,
+            "title": "Create fallback mechanisms for AI unavailability",
+            "description": "Implement graceful degradation when Claude Code is not available",
+            "dependencies": [
+              "4.4",
+              "4.6"
+            ],
+            "details": "Design fallback responses for when Claude Code cannot process requests. Implement error handling that provides helpful user feedback. Create template-based code generation for common patterns as a fallback. Add retry logic with exponential backoff for transient failures. Implement a status indicator to show when the system is operating in degraded mode. Ensure the frontend gracefully handles fallback responses.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Update Sandbox Management APIs",
+        "description": "Modify sandbox control endpoints to manage local processes instead of E2B containers",
+        "details": "Update /app/api/kill-sandbox/route.ts to kill local Vite process using process.kill(). Modify /app/api/restart-vite/route.ts to restart local Vite server. Update /app/api/sandbox-status/route.ts to check local process status. Modify /app/api/run-command/route.ts to execute commands locally via child_process. Replace all E2B-specific process management with Node.js process control.",
+        "testStrategy": "Test process lifecycle management: start, stop, restart, and status checking of local Vite server. Verify command execution in local environment",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2
+        ],
+        "status": "pending",
+        "subtasks": []
+      },
+      {
+        "id": 6,
+        "title": "Update Package Dependencies",
+        "description": "Remove external service dependencies and add local processing libraries",
+        "details": "Update package.json to remove: @e2b/code-interpreter, e2b, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/openai, ai (Vercel AI SDK). Add: cheerio for HTML parsing. Update package-lock.json accordingly. Ensure all remaining dependencies are compatible with local-only operation.",
+        "testStrategy": "Run npm install to verify dependency resolution. Test application startup without external API dependencies. Verify cheerio HTML parsing functionality",
+        "priority": "medium",
+        "dependencies": [
+          3
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Remove E2B and AI SDK packages",
+            "description": "Remove all external service dependencies from package.json including E2B packages and Vercel AI SDK packages",
+            "dependencies": [],
+            "details": "Edit package.json to remove the following packages: @e2b/code-interpreter, e2b, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/openai, and ai (Vercel AI SDK). After removing these dependencies from package.json, run npm uninstall for each package to ensure they are completely removed from node_modules and package-lock.json is updated correctly.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Add cheerio and verify local dependencies",
+            "description": "Add cheerio for HTML parsing and ensure all remaining dependencies are compatible with local-only operation",
+            "dependencies": [
+              "6.1"
+            ],
+            "details": "Run npm install cheerio to add the HTML parsing library. After installation, run npm install to regenerate package-lock.json with the updated dependency tree. Test the application startup to verify no breaking changes from removed dependencies. Check that all remaining packages in package.json are compatible with local operation and don't require external API services.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Update Environment Configuration",
+        "description": "Modify environment variables and configuration for local operation",
+        "details": "Update config/app.config.ts to remove AI provider configurations and E2B settings. Add LOCAL_SANDBOX_PATH=./sandbox and VITE_PORT=5173 environment variables. Update .env.example to reflect new local-only setup. Remove E2B_API_KEY, FIRECRAWL_API_KEY, and AI provider API keys from environment requirements. Update model configurations to reflect Claude Code-only operation.",
+        "testStrategy": "Verify application startup with new configuration. Test local sandbox path resolution and Vite port configuration",
+        "priority": "low",
+        "dependencies": [
+          6
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Remove External Service Configurations from app.config.ts",
+            "description": "Clean up config/app.config.ts by removing all E2B and AI provider related configurations",
+            "dependencies": [],
+            "details": "Remove E2B configuration objects including sandbox settings, timeout values, and template configurations. Remove AI provider configurations for Anthropic, OpenAI, and Groq. Remove defaultModel and modelConfig sections. Keep only local development related settings like port configurations and basic app metadata.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Add Local Environment Variables and Update Configuration",
+            "description": "Add new local sandbox path and Vite port environment variables to the configuration",
+            "dependencies": [
+              "7.1"
+            ],
+            "details": "Add LOCAL_SANDBOX_PATH configuration defaulting to './sandbox'. Add VITE_PORT configuration defaulting to 5173. Update any existing configuration to use these new environment variables. Ensure proper type definitions for the new configuration structure. Update any configuration exports to reflect the simplified local-only setup.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Update .env.example and Remove API Key Requirements",
+            "description": "Update environment variable documentation to reflect local-only operation",
+            "dependencies": [
+              "7.2"
+            ],
+            "details": "Remove E2B_API_KEY, FIRECRAWL_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, and GROQ_API_KEY from .env.example. Add LOCAL_SANDBOX_PATH=./sandbox and VITE_PORT=5173 to .env.example with appropriate comments. Update any README or documentation that references these environment variables. Ensure all environment variable references in the codebase are updated accordingly.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Update Frontend Components",
+        "description": "Modify UI components to reflect local development workflow",
+        "details": "Update app/page.tsx to remove or hardcode AI model selector to 'Claude Code'. Update sandbox preview iframe to point to http://localhost:5173. Modify error handling for local environment issues instead of E2B errors. Add indicators for local server status. Update any references to external services in the UI.",
+        "testStrategy": "Test UI functionality with local preview, verify error handling for local server issues, and confirm proper status indicators",
+        "priority": "low",
+        "dependencies": [
+          4,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Hardcode AI Model Selector to Claude Code",
+            "description": "Remove or hardcode the AI model selector dropdown to only show 'Claude Code' as the selected model",
+            "dependencies": [],
+            "details": "Locate the model selector component in app/page.tsx. Either remove the dropdown entirely and display 'Claude Code' as static text, or hardcode the selector to only have 'Claude Code' as an option. Update any related state management that handles model selection. Remove or simplify the ModelSelector component if it exists.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Update Preview iframe URL to Localhost",
+            "description": "Modify the sandbox preview iframe to point to http://localhost:5173 instead of E2B container URLs",
+            "dependencies": [],
+            "details": "Find the iframe component in app/page.tsx that displays the sandbox preview. Update the src attribute to use 'http://localhost:5173' instead of any E2B-related URLs. Update any URL construction logic that builds the preview URL. Ensure the iframe properly handles local server connection states.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Modify Error Handling for Local Environment",
+            "description": "Replace E2B-specific error handling with local server error handling throughout the UI",
+            "dependencies": [],
+            "details": "Search for all E2B error handling blocks in app/page.tsx. Replace E2B-specific error messages with local development error messages (e.g., 'Local server not running', 'Failed to connect to localhost:5173'). Update error states to handle common local development issues like port conflicts, server crashes, or file permission errors. Modify any error recovery mechanisms to work with local processes.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Add Local Server Status Indicators",
+            "description": "Implement UI components to show the status of the local Vite development server",
+            "dependencies": [
+              "8.1",
+              "8.2",
+              "8.3"
+            ],
+            "details": "Create or update status indicator components to show whether the local Vite server is running, stopped, or restarting. Add visual indicators (icons, badges, or status text) near the preview area. Implement polling or WebSocket connection to check server status. Update any existing E2B status indicators to reflect local server states instead. Consider adding a 'Restart Server' button for manual control.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Implement Local Process Management",
+        "description": "Create robust local process management system for sandbox operations",
+        "details": "Create process management utilities for handling local Node.js processes. Implement process cleanup on application shutdown. Add port conflict detection and resolution for Vite server. Implement proper error handling for local filesystem operations. Add process monitoring and automatic restart capabilities for crashed local servers.",
+        "testStrategy": "Test process lifecycle management, port conflict handling, error recovery, and cleanup procedures. Verify stability under various failure scenarios",
+        "priority": "medium",
+        "dependencies": [
+          1,
+          2,
+          5
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create process management utility module",
+            "description": "Build core process management module with spawn, kill, and lifecycle tracking capabilities",
+            "dependencies": [],
+            "details": "Create /lib/process-manager.ts module with ProcessManager class. Implement methods for spawning child processes with proper error handling, maintaining a registry of active processes with their PIDs and metadata, graceful process termination with timeout fallback to SIGKILL, and process state tracking (starting, running, stopped, crashed). Use child_process.spawn() for process creation and maintain a Map of process instances.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Implement cleanup handlers for application shutdown",
+            "description": "Add proper cleanup logic to terminate all child processes when the application exits",
+            "dependencies": [
+              "9.1"
+            ],
+            "details": "Register process exit handlers using process.on('exit'), process.on('SIGINT'), and process.on('SIGTERM'). Implement graceful shutdown sequence that stops all tracked processes, waits for confirmation of termination, forcefully kills any remaining processes after timeout, and cleans up temporary files and resources. Add cleanup method to ProcessManager that iterates through all active processes and terminates them.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Add port conflict detection and resolution",
+            "description": "Implement port availability checking and automatic port assignment for Vite server",
+            "dependencies": [
+              "9.1"
+            ],
+            "details": "Create port management utilities in /lib/port-utils.ts. Implement checkPortAvailable() using net.createServer() to test port binding, findAvailablePort() to scan for next available port starting from 5173, and automatic port reassignment if default port is occupied. Update Vite server startup to use dynamic port assignment and return the actual port in API responses.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Implement robust error handling for filesystem operations",
+            "description": "Add comprehensive error handling for all local filesystem operations",
+            "dependencies": [],
+            "details": "Wrap all fs operations in try-catch blocks with specific error handling for ENOENT (file not found), EACCES (permission denied), ENOSPC (no space left), and EMFILE (too many open files). Implement retry logic with exponential backoff for transient errors. Add proper logging for filesystem errors and create fallback mechanisms for critical operations. Ensure all file operations are atomic where possible using fs.rename() for move operations.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 5,
+            "title": "Add process monitoring and auto-restart capabilities",
+            "description": "Implement health checking and automatic restart for crashed local servers",
+            "dependencies": [
+              "9.1",
+              "9.2"
+            ],
+            "details": "Add process monitoring to ProcessManager with health check intervals every 5 seconds, detection of crashed processes via exit codes and signals, automatic restart with exponential backoff (max 3 retries), and event emitters for process state changes. Implement HTTP health checks for Vite server using fetch to localhost:port. Add configurable restart policies (always, on-failure, never) and maintain restart history to prevent infinite restart loops.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Comprehensive Testing and Documentation",
+        "description": "Test complete local workflow and update documentation",
+        "details": "Perform end-to-end testing of local-only workflow: sandbox creation, file operations, web scraping, code generation, and preview. Update README.md and CLAUDE.md with new local setup instructions. Remove references to external API requirements. Create troubleshooting guide for common local development issues. Test cross-platform compatibility (Windows/Mac/Linux).",
+        "testStrategy": "Execute complete user workflow from project initialization to code generation and preview. Verify documentation accuracy and completeness. Test on multiple operating systems",
+        "priority": "medium",
+        "dependencies": [
+          7,
+          8,
+          9
+        ],
+        "status": "pending",
+        "subtasks": [
+          {
+            "id": 1,
+            "title": "Create end-to-end test suite for local workflow",
+            "description": "Develop comprehensive test suite covering the entire local development workflow from project initialization through code generation and preview",
+            "dependencies": [],
+            "details": "Create test suite that validates: project initialization with local sandbox creation, file operations (create/modify/delete) in sandbox/ directory, markdown prompt generation for Claude Code, code generation and parsing workflow, local Vite server startup and hot reload, web scraping integration if applicable. Include both unit tests for individual components and integration tests for complete user workflows. Ensure tests cover error scenarios and edge cases.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 2,
+            "title": "Update README.md with local setup instructions",
+            "description": "Rewrite README.md to reflect the new local-only development workflow and remove all references to external API requirements",
+            "dependencies": [],
+            "details": "Update project overview to describe local Claude Code integration. Replace API key setup section with Claude Code installation instructions. Document new local workflow: how to start the application, how code generation works with Claude Code, how the local sandbox operates. Remove all references to E2B, Firecrawl API keys, and cloud AI providers. Add clear step-by-step setup guide for first-time users. Include system requirements and prerequisites (Node.js version, Claude Code CLI).",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 3,
+            "title": "Update CLAUDE.md with new workflow documentation",
+            "description": "Revise CLAUDE.md to document the new local development workflow and provide guidance for Claude Code interactions",
+            "dependencies": [],
+            "details": "Update architecture section to reflect local-only components. Document new API routes behavior without external services. Explain how Claude Code should interpret and process markdown prompts from the application. Add examples of expected code generation formats and responses. Update development commands section with local testing and debugging instructions. Include guidelines for Claude Code to handle file operations in sandbox/ directory. Document the local Vite server integration and preview workflow.",
+            "status": "pending",
+            "testStrategy": ""
+          },
+          {
+            "id": 4,
+            "title": "Test cross-platform compatibility and create troubleshooting guide",
+            "description": "Validate application functionality across Windows, Mac, and Linux platforms and document common issues with solutions",
+            "dependencies": [
+              "10.1"
+            ],
+            "details": "Test complete workflow on Windows (PowerShell/CMD), macOS (Terminal), and Linux (Ubuntu/Debian). Document platform-specific issues: file path differences, permission requirements, process management variations. Create troubleshooting guide covering: port conflicts resolution, file permission errors, Node.js version compatibility, Claude Code CLI installation issues, local server startup problems. Include debug commands and diagnostic steps. Add FAQ section for common user questions. Ensure guide covers recovery procedures for corrupted sandbox states.",
+            "status": "pending",
+            "testStrategy": ""
+          }
+        ]
+      }
+    ],
+    "metadata": {
+      "created": "2025-08-12T13:01:28.276Z",
+      "updated": "2025-08-12T18:03:11.895Z",
+      "description": "Tasks for master context"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+# Task ID: 8
+# Title: Update Frontend Components
+# Status: pending
+# Dependencies: 4, 5
+# Priority: low
+# Description: Modify UI components to reflect local development workflow
+# Details:
+Update app/page.tsx to remove or hardcode AI model selector to 'Claude Code'. Update sandbox preview iframe to point to http://localhost:5173. Modify error handling for local environment issues instead of E2B errors. Add indicators for local server status. Update any references to external services in the UI.
+
+# Test Strategy:
+Test UI functionality with local preview, verify error handling for local server issues, and confirm proper status indicators
+
+# Subtasks:
+## 1. Hardcode AI Model Selector to Claude Code [pending]
+### Dependencies: None
+### Description: Remove or hardcode the AI model selector dropdown to only show 'Claude Code' as the selected model
+### Details:
+Locate the model selector component in app/page.tsx. Either remove the dropdown entirely and display 'Claude Code' as static text, or hardcode the selector to only have 'Claude Code' as an option. Update any related state management that handles model selection. Remove or simplify the ModelSelector component if it exists.
+
+## 2. Update Preview iframe URL to Localhost [pending]
+### Dependencies: None
+### Description: Modify the sandbox preview iframe to point to http://localhost:5173 instead of E2B container URLs
+### Details:
+Find the iframe component in app/page.tsx that displays the sandbox preview. Update the src attribute to use 'http://localhost:5173' instead of any E2B-related URLs. Update any URL construction logic that builds the preview URL. Ensure the iframe properly handles local server connection states.
+
+## 3. Modify Error Handling for Local Environment [pending]
+### Dependencies: None
+### Description: Replace E2B-specific error handling with local server error handling throughout the UI
+### Details:
+Search for all E2B error handling blocks in app/page.tsx. Replace E2B-specific error messages with local development error messages (e.g., 'Local server not running', 'Failed to connect to localhost:5173'). Update error states to handle common local development issues like port conflicts, server crashes, or file permission errors. Modify any error recovery mechanisms to work with local processes.
+
+## 4. Add Local Server Status Indicators [pending]
+### Dependencies: 8.1, 8.2, 8.3
+### Description: Implement UI components to show the status of the local Vite development server
+### Details:
+Create or update status indicator components to show whether the local Vite server is running, stopped, or restarting. Add visual indicators (icons, badges, or status text) near the preview area. Implement polling or WebSocket connection to check server status. Update any existing E2B status indicators to reflect local server states instead. Consider adding a 'Restart Server' button for manual control.
+

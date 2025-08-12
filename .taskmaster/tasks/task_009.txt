@@ -1,0 +1,43 @@
+# Task ID: 9
+# Title: Implement Local Process Management
+# Status: pending
+# Dependencies: 1, 2, 5
+# Priority: medium
+# Description: Create robust local process management system for sandbox operations
+# Details:
+Create process management utilities for handling local Node.js processes. Implement process cleanup on application shutdown. Add port conflict detection and resolution for Vite server. Implement proper error handling for local filesystem operations. Add process monitoring and automatic restart capabilities for crashed local servers.
+
+# Test Strategy:
+Test process lifecycle management, port conflict handling, error recovery, and cleanup procedures. Verify stability under various failure scenarios
+
+# Subtasks:
+## 1. Create process management utility module [pending]
+### Dependencies: None
+### Description: Build core process management module with spawn, kill, and lifecycle tracking capabilities
+### Details:
+Create /lib/process-manager.ts module with ProcessManager class. Implement methods for spawning child processes with proper error handling, maintaining a registry of active processes with their PIDs and metadata, graceful process termination with timeout fallback to SIGKILL, and process state tracking (starting, running, stopped, crashed). Use child_process.spawn() for process creation and maintain a Map of process instances.
+
+## 2. Implement cleanup handlers for application shutdown [pending]
+### Dependencies: 9.1
+### Description: Add proper cleanup logic to terminate all child processes when the application exits
+### Details:
+Register process exit handlers using process.on('exit'), process.on('SIGINT'), and process.on('SIGTERM'). Implement graceful shutdown sequence that stops all tracked processes, waits for confirmation of termination, forcefully kills any remaining processes after timeout, and cleans up temporary files and resources. Add cleanup method to ProcessManager that iterates through all active processes and terminates them.
+
+## 3. Add port conflict detection and resolution [pending]
+### Dependencies: 9.1
+### Description: Implement port availability checking and automatic port assignment for Vite server
+### Details:
+Create port management utilities in /lib/port-utils.ts. Implement checkPortAvailable() using net.createServer() to test port binding, findAvailablePort() to scan for next available port starting from 5173, and automatic port reassignment if default port is occupied. Update Vite server startup to use dynamic port assignment and return the actual port in API responses.
+
+## 4. Implement robust error handling for filesystem operations [pending]
+### Dependencies: None
+### Description: Add comprehensive error handling for all local filesystem operations
+### Details:
+Wrap all fs operations in try-catch blocks with specific error handling for ENOENT (file not found), EACCES (permission denied), ENOSPC (no space left), and EMFILE (too many open files). Implement retry logic with exponential backoff for transient errors. Add proper logging for filesystem errors and create fallback mechanisms for critical operations. Ensure all file operations are atomic where possible using fs.rename() for move operations.
+
+## 5. Add process monitoring and auto-restart capabilities [pending]
+### Dependencies: 9.1, 9.2
+### Description: Implement health checking and automatic restart for crashed local servers
+### Details:
+Add process monitoring to ProcessManager with health check intervals every 5 seconds, detection of crashed processes via exit codes and signals, automatic restart with exponential backoff (max 3 retries), and event emitters for process state changes. Implement HTTP health checks for Vite server using fetch to localhost:port. Add configurable restart policies (always, on-failure, never) and maintain restart history to prevent infinite restart loops.
+

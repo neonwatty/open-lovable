@@ -1,0 +1,55 @@
+# Task ID: 4
+# Title: Create Claude Code Integration Bridge
+# Status: pending
+# Dependencies: None
+# Priority: high
+# Description: Replace AI SDK integrations with Claude Code-compatible interface
+# Details:
+Modify /app/api/generate-ai-code-stream/route.ts to remove all AI SDK imports (@ai-sdk/groq, @ai-sdk/anthropic, @ai-sdk/openai). Create new interface that formats prompts for Claude Code consumption. Implement markdown-based code generation format parsing. Create system that outputs structured prompts that Claude Code can process. Maintain streaming response format for frontend compatibility.
+
+# Test Strategy:
+Verify prompt formatting, code generation structure, and streaming response compatibility with existing frontend components
+
+# Subtasks:
+## 1. Remove all AI SDK imports and dependencies [pending]
+### Dependencies: None
+### Description: Clean up /app/api/generate-ai-code-stream/route.ts by removing all AI SDK imports
+### Details:
+Remove imports for @ai-sdk/groq, @ai-sdk/anthropic, @ai-sdk/openai, and any related AI SDK dependencies. Comment out or temporarily stub any code that directly uses these SDKs. Update package.json to remove these dependencies. Ensure the file still compiles without errors by adding temporary placeholder functions where needed.
+
+## 2. Design markdown-based prompt formatting system [pending]
+### Dependencies: 4.1
+### Description: Create a system to format prompts in markdown structure for Claude Code consumption
+### Details:
+Design a markdown template structure that includes system prompts, user messages, code context, and file contents. Create utility functions to format conversation history, scraped website content, and selected files into structured markdown. Define clear section headers and delimiters for different types of context (e.g., '## User Request', '## Code Context', '## File Contents'). Ensure the format is compatible with Claude Code's expected input structure.
+
+## 3. Implement code generation response parsing [pending]
+### Dependencies: 4.2
+### Description: Create parser for Claude Code's markdown-based code generation format
+### Details:
+Build a parser that extracts code blocks, file paths, and operation types from Claude Code's markdown responses. Implement regex patterns to identify code fence blocks with language identifiers. Extract file creation, modification, and deletion instructions from the response. Parse any additional metadata or instructions embedded in the markdown. Create data structures to hold parsed code and file operations.
+
+## 4. Maintain streaming response compatibility [pending]
+### Dependencies: 4.3
+### Description: Ensure the new system maintains compatibility with frontend streaming expectations
+### Details:
+Implement a streaming interface that mimics the existing AI SDK streaming format. Create a transform stream that converts Claude Code's output into the expected frontend format. Maintain the same event structure and data format that the frontend CodeApplicationProgress component expects. Implement buffering and chunking to ensure smooth streaming. Test with existing frontend components to verify compatibility.
+
+## 5. Handle conversation context and state management [pending]
+### Dependencies: 4.2, 4.4
+### Description: Implement context management without relying on AI SDK's built-in features
+### Details:
+Create a context manager that tracks conversation history, generated components, and scraped websites. Implement memory management to handle context window limitations. Build functions to intelligently select and prioritize relevant context based on user queries. Maintain the existing context selection logic from lib/context/context-selector.ts. Store and retrieve conversation state between requests.
+
+## 6. Implement user preference analysis without AI SDKs [pending]
+### Dependencies: 4.5
+### Description: Replace AI-based preference analysis with rule-based or pattern matching system
+### Details:
+Analyze the existing analyzeUserIntent and analyzePromptForRelevance functions. Create pattern matching rules to identify user intents (update, add feature, fix issue, etc.). Implement keyword-based relevance scoring for file and context selection. Build heuristics to determine which files and components are relevant to user requests. Maintain compatibility with the existing EditIntentType and relevance scoring interfaces.
+
+## 7. Create fallback mechanisms for AI unavailability [pending]
+### Dependencies: 4.4, 4.6
+### Description: Implement graceful degradation when Claude Code is not available
+### Details:
+Design fallback responses for when Claude Code cannot process requests. Implement error handling that provides helpful user feedback. Create template-based code generation for common patterns as a fallback. Add retry logic with exponential backoff for transient failures. Implement a status indicator to show when the system is operating in degraded mode. Ensure the frontend gracefully handles fallback responses.
+
