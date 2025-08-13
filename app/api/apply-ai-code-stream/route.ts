@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Sandbox } from '@e2b/code-interpreter';
 import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
 import { promises as fs } from 'fs';
@@ -308,9 +307,8 @@ export async function POST(request: NextRequest) {
       console.log(`[apply-ai-code-stream] Sandbox ${sandboxId} not in this instance, attempting reconnect...`);
       
       try {
-        // Reconnect to the existing sandbox using E2B's connect method
-        sandbox = await Sandbox.connect(sandboxId, { apiKey: process.env.E2B_API_KEY });
-        console.log(`[apply-ai-code-stream] Successfully reconnected to sandbox ${sandboxId}`);
+        // NOTE: E2B sandbox reconnection removed for local-only operation
+        console.log(`[apply-ai-code-stream] Sandbox reconnection skipped - operating in local-only mode`);
         
         // Store the reconnected sandbox globally for this instance
         global.activeSandbox = sandbox;
@@ -696,29 +694,38 @@ export async function POST(request: NextRequest) {
           message: `Successfully applied ${results.filesCreated.length} files`
         });
         
-        // Track applied files in conversation state
-        if (global.conversationState && results.filesCreated.length > 0) {
-          const messages = global.conversationState.context.messages;
-          if (messages.length > 0) {
-            const lastMessage = messages[messages.length - 1];
-            if (lastMessage.role === 'user') {
-              lastMessage.metadata = {
-                ...lastMessage.metadata,
-                editedFiles: results.filesCreated
-              };
+        // Track applied files in conversation state using the conversation bridge
+        try {
+          const { conversationManager } = await import('@/lib/conversation-manager');
+          const conversationState = conversationManager.getState();
+          
+          if (conversationState && results.filesCreated.length > 0) {
+            // Update the last user message with applied files metadata
+            const messages = conversationState.context.messages;
+            if (messages.length > 0) {
+              const lastMessage = messages[messages.length - 1];
+              if (lastMessage.role === 'user') {
+                lastMessage.metadata = {
+                  ...lastMessage.metadata,
+                  editedFiles: results.filesCreated
+                };
+              }
             }
+            
+            // Track applied code in project evolution
+            if (conversationState.context.projectEvolution) {
+              conversationState.context.projectEvolution.majorChanges.push({
+                timestamp: Date.now(),
+                description: parsed.explanation || 'Code applied successfully',
+                filesAffected: results.filesCreated || []
+              });
+            }
+            
+            conversationState.lastUpdated = Date.now();
+            console.log('[apply-ai-code-stream] Tracked applied files in conversation state:', results.filesCreated);
           }
-          
-          // Track applied code in project evolution
-          if (global.conversationState.context.projectEvolution) {
-            global.conversationState.context.projectEvolution.majorChanges.push({
-              timestamp: Date.now(),
-              description: parsed.explanation || 'Code applied',
-              filesAffected: results.filesCreated || []
-            });
-          }
-          
-          global.conversationState.lastUpdated = Date.now();
+        } catch (error) {
+          console.warn('[apply-ai-code-stream] Error updating conversation state:', error);
         }
         
       } catch (error) {

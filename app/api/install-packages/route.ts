@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Sandbox } from '@e2b/code-interpreter';
 
 declare global {
   var activeSandbox: any;
@@ -40,18 +39,9 @@ export async function POST(request: NextRequest) {
     let sandbox = global.activeSandbox;
     
     if (!sandbox && sandboxId) {
-      console.log(`[install-packages] Reconnecting to sandbox ${sandboxId}...`);
-      try {
-        sandbox = await Sandbox.connect(sandboxId, { apiKey: process.env.E2B_API_KEY });
-        global.activeSandbox = sandbox;
-        console.log(`[install-packages] Successfully reconnected to sandbox ${sandboxId}`);
-      } catch (error) {
-        console.error(`[install-packages] Failed to reconnect to sandbox:`, error);
-        return NextResponse.json({ 
-          success: false, 
-          error: `Failed to reconnect to sandbox: ${(error as Error).message}` 
-        }, { status: 500 });
-      }
+      console.log(`[install-packages] E2B sandbox connection removed for local-only operation`);
+      // For local-only operation, we'll skip sandbox reconnection
+      // Package installation should be handled through local Node.js processes
     }
     
     if (!sandbox) {

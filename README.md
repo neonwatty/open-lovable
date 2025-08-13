@@ -2,7 +2,7 @@
 
 # Open Lovable
 
-Chat with AI to build React apps instantly.
+Chat with Claude Code to build React apps instantly - Local-only version with no external dependencies.
 
 <img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExbmZtaHFleGRsMTNlaWNydGdianI4NGQ4dHhyZjB0d2VkcjRyeXBucCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/ZFVLWMa6dVskQX0qu1/giphy.gif" alt="Open Lovable Demo" width="100%"/>
 
@@ -17,17 +17,21 @@ cd open-lovable
 npm install
 ```
 
-2. **Add `.env.local`**
+2. **Add `.env.local` (Optional)**
 ```env
-# Required
-E2B_API_KEY=your_e2b_api_key  # Get from https://e2b.dev (Sandboxes)
-FIRECRAWL_API_KEY=your_firecrawl_api_key  # Get from https://firecrawl.dev (Web scraping)
+# Local Development Configuration for Claude Code-only Operation
 
-# Optional (need at least one AI provider)
-ANTHROPIC_API_KEY=your_anthropic_api_key  # Get from https://console.anthropic.com
-OPENAI_API_KEY=your_openai_api_key  # Get from https://platform.openai.com (GPT-5)
-GROQ_API_KEY=your_groq_api_key  # Get from https://console.groq.com (Fast inference - Kimi K2 recommended)
+# Local sandbox directory for file operations
+LOCAL_SANDBOX_PATH=./sandbox
+
+# Vite development server port
+VITE_PORT=5173
+
+# Optional - Development settings
+NODE_ENV=development
 ```
+
+> **Note:** This version operates locally with Claude Code integration. External API keys for E2B, Firecrawl, or AI providers are no longer required.
 
 3. **Run**
 ```bash

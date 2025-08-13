@@ -22,6 +22,7 @@ import {
 } from '@/lib/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import CodeApplicationProgress, { type CodeApplicationState } from '@/components/CodeApplicationProgress';
+import AIServiceStatusIndicator from '@/components/AIServiceStatusIndicator';
 
 interface SandboxData {
   sandboxId: string;
@@ -60,10 +61,8 @@ export default function AISandboxPage() {
   const [aiEnabled] = useState(true);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [aiModel, setAiModel] = useState(() => {
-    const modelParam = searchParams.get('model');
-    return appConfig.ai.availableModels.includes(modelParam || '') ? modelParam! : appConfig.ai.defaultModel;
-  });
+  // NOTE: AI model selection removed for Claude Code-only operation
+  const aiModel = 'claude-code';
   const [urlOverlayVisible, setUrlOverlayVisible] = useState(false);
   const [urlInput, setUrlInput] = useState('');
   const [urlStatus, setUrlStatus] = useState<string[]>([]);
@@ -516,7 +515,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                   } else if (data.message.includes('Creating files') || data.message.includes('Applying')) {
                     setCodeApplicationState({ 
                       stage: 'applying',
-                      filesGenerated: results.filesCreated 
+                      filesGenerated: data.filesGenerated || []
                     });
                   }
                   break;
@@ -677,32 +676,18 @@ Tip: I automatically detect and install npm packages from your code imports (lik
           log(data.explanation);
         }
         
-        if (data.autoCompleted) {
-          log('Auto-generating missing components...', 'command');
-          
-          if (data.autoCompletedComponents) {
-            setTimeout(() => {
-              log('Auto-generated missing components:', 'info');
-              data.autoCompletedComponents.forEach((comp: string) => {
-                log(`  ${comp}`, 'command');
-              });
-            }, 1000);
-          }
-        } else if (data.warning) {
-          log(data.warning, 'error');
-          
-          if (data.missingImports && data.missingImports.length > 0) {
-            const missingList = data.missingImports.join(', ');
+        // NOTE: Auto-completion and warning features removed for local-only operation  
+        if ((data as any).missingImports && (data as any).missingImports.length > 0) {
+            const missingList = (data as any).missingImports.join(', ');
             addChatMessage(
               `Ask me to "create the missing components: ${missingList}" to fix these import errors.`,
               'system'
             );
-          }
         }
         
         log('Code applied successfully!');
         console.log('[applyGeneratedCode] Response data:', data);
-        console.log('[applyGeneratedCode] Debug info:', data.debug);
+        console.log('[applyGeneratedCode] Debug info:', (data as any).debug);
         console.log('[applyGeneratedCode] Current sandboxData:', sandboxData);
         console.log('[applyGeneratedCode] Current iframe element:', iframeRef.current);
         console.log('[applyGeneratedCode] Current iframe src:', iframeRef.current?.src);
@@ -997,7 +982,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                       // Create a map of edited files
                       const editedFiles = new Set(
                         generationProgress.files
-                          .filter(f => f.edited)
+                          .filter(f => (f as any).edited)
                           .map(f => f.path)
                       );
                       
@@ -1010,7 +995,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                         if (!fileTree[dir]) fileTree[dir] = [];
                         fileTree[dir].push({
                           name: fileName,
-                          edited: file.edited || false
+                          edited: (file as any).edited || false
                         });
                       });
                       
@@ -1634,8 +1619,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                               ...updatedState.files[existingFileIndex],
                               content: fileContent.trim(),
                               type: fileType,
-                              completed: true,
-                              edited: true
+                              completed: true
                             },
                             ...updatedState.files.slice(existingFileIndex + 1)
                           ];
@@ -1646,7 +1630,6 @@ Tip: I automatically detect and install npm packages from your code imports (lik
                             content: fileContent.trim(),
                             type: fileType,
                             completed: true,
-                            edited: false
                           }];
                         }
                         
@@ -2571,8 +2554,7 @@ Focus on the key sections and content, making it clean and modern.`;
                               ...updatedState.files[existingFileIndex],
                               content: fileContent.trim(),
                               type: fileType,
-                              completed: true,
-                              edited: true
+                              completed: true
                             },
                             ...updatedState.files.slice(existingFileIndex + 1)
                           ];
@@ -2583,7 +2565,6 @@ Focus on the key sections and content, making it clean and modern.`;
                             content: fileContent.trim(),
                             type: fileType,
                             completed: true,
-                            edited: false
                           }];
                         }
                         
@@ -2961,25 +2942,15 @@ Focus on the key sections and content, making it clean and modern.`;
                 <select
                   value={aiModel}
                   onChange={(e) => {
-                    const newModel = e.target.value;
-                    setAiModel(newModel);
-                    const params = new URLSearchParams(searchParams);
-                    params.set('model', newModel);
-                    if (sandboxData?.sandboxId) {
-                      params.set('sandbox', sandboxData.sandboxId);
-                    }
-                    router.push(`/?${params.toString()}`);
+                    // NOTE: Model selection disabled for Claude Code-only operation
+                    console.log('Model selector disabled');
                   }}
                   className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
                   style={{
                     boxShadow: '0 0 0 1px #e3e1de66, 0 1px 2px #5f4a2e14'
                   }}
                 >
-                  {appConfig.ai.availableModels.map(model => (
-                    <option key={model} value={model}>
-                      {appConfig.ai.modelDisplayNames[model] || model}
-                    </option>
-                  ))}
+                  <option value="claude-code">Claude Code</option>
                 </select>
               </div>
             </div>
@@ -3000,22 +2971,12 @@ Focus on the key sections and content, making it clean and modern.`;
           <select
             value={aiModel}
             onChange={(e) => {
-              const newModel = e.target.value;
-              setAiModel(newModel);
-              const params = new URLSearchParams(searchParams);
-              params.set('model', newModel);
-              if (sandboxData?.sandboxId) {
-                params.set('sandbox', sandboxData.sandboxId);
-              }
-              router.push(`/?${params.toString()}`);
+              // NOTE: Model selection disabled for Claude Code-only operation
+              console.log('Model selector disabled');
             }}
             className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
           >
-            {appConfig.ai.availableModels.map(model => (
-              <option key={model} value={model}>
-                {appConfig.ai.modelDisplayNames[model] || model}
-              </option>
-            ))}
+            <option value="claude-code">Claude Code</option>
           </select>
           <Button 
             variant="code"
@@ -3049,9 +3010,12 @@ Focus on the key sections and content, making it clean and modern.`;
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" />
             </svg>
           </Button>
-          <div className="inline-flex items-center gap-2 bg-[#36322F] text-white px-3 py-1.5 rounded-[10px] text-sm font-medium [box-shadow:inset_0px_-2px_0px_0px_#171310,_0px_1px_6px_0px_rgba(58,_33,_8,_58%)]">
-            <span id="status-text">{status.text}</span>
-            <div className={`w-2 h-2 rounded-full ${status.active ? 'bg-green-500' : 'bg-gray-500'}`} />
+          <div className="flex items-center gap-3">
+            <div className="inline-flex items-center gap-2 bg-[#36322F] text-white px-3 py-1.5 rounded-[10px] text-sm font-medium [box-shadow:inset_0px_-2px_0px_0px_#171310,_0px_1px_6px_0px_rgba(58,_33,_8,_58%)]">
+              <span id="status-text">{status.text}</span>
+              <div className={`w-2 h-2 rounded-full ${status.active ? 'bg-green-500' : 'bg-gray-500'}`} />
+            </div>
+            <AIServiceStatusIndicator showDetails={true} />
           </div>
         </div>
       </div>

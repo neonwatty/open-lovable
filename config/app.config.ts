@@ -2,18 +2,10 @@
 // This file contains all configurable settings for the application
 
 export const appConfig = {
-  // E2B Sandbox Configuration
-  e2b: {
-    // Sandbox timeout in minutes
-    timeoutMinutes: 15,
-    
-    // Convert to milliseconds for E2B API
-    get timeoutMs() {
-      return this.timeoutMinutes * 60 * 1000;
-    },
-    
-    // Vite development server port
-    vitePort: 5173,
+  // Local Development Configuration
+  local: {
+    // Vite development server port (configurable via environment)
+    vitePort: parseInt(process.env.VITE_PORT || '5173'),
     
     // Time to wait for Vite to be ready (in milliseconds)
     viteStartupDelay: 7000,
@@ -21,38 +13,11 @@ export const appConfig = {
     // Time to wait for CSS rebuild (in milliseconds)
     cssRebuildDelay: 2000,
     
-    // Default sandbox template (if using templates)
-    defaultTemplate: undefined, // or specify a template ID
+    // Local sandbox path for file operations (configurable via environment)
+    sandboxPath: process.env.LOCAL_SANDBOX_PATH || './sandbox',
   },
   
-  // AI Model Configuration
-  ai: {
-    // Default AI model
-    defaultModel: 'moonshotai/kimi-k2-instruct',
-    
-    // Available models
-    availableModels: [
-      'openai/gpt-5',
-      'moonshotai/kimi-k2-instruct',
-      'anthropic/claude-sonnet-4-20250514'
-    ],
-    
-    // Model display names
-    modelDisplayNames: {
-      'openai/gpt-5': 'GPT-5',
-      'moonshotai/kimi-k2-instruct': 'Kimi K2 Instruct',
-      'anthropic/claude-sonnet-4-20250514': 'Sonnet 4'
-    },
-    
-    // Temperature settings for non-reasoning models
-    defaultTemperature: 0.7,
-    
-    // Max tokens for code generation
-    maxTokens: 8000,
-    
-    // Max tokens for truncation recovery
-    truncationRecoveryMaxTokens: 4000,
-  },
+  // NOTE: AI Model Configuration removed for Claude Code-only operation
   
   // Code Application Configuration
   codeApplication: {
@@ -72,7 +37,7 @@ export const appConfig = {
   // UI Configuration
   ui: {
     // Show/hide certain UI elements
-    showModelSelector: true,
+    showModelSelector: false, // Disabled for Claude Code-only operation
     showStatusIndicator: true,
     
     // Animation durations (milliseconds)
@@ -147,7 +112,9 @@ export const appConfig = {
     
     // Request timeout (milliseconds)
     requestTimeout: 30000,
-  }
+  },
+  
+  // NOTE: AI Fallback System Configuration removed for Claude Code-only operation
 };
 
 // Type-safe config getter
