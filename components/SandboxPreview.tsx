@@ -22,9 +22,8 @@ export default function SandboxPreview({
 
   useEffect(() => {
     if (sandboxId && type !== 'console') {
-      // In production, this would be the actual E2B sandbox URL
-      // Format: https://{sandboxId}-{port}.e2b.dev
-      setPreviewUrl(`https://${sandboxId}-${port}.e2b.dev`);
+      // For local development, use localhost URL
+      setPreviewUrl(`http://localhost:${port}`);
     }
   }, [sandboxId, port, type]);
 
@@ -96,7 +95,7 @@ export default function SandboxPreview({
         
         <iframe
           key={iframeKey}
-          src={previewUrl}
+          src={previewUrl || undefined}
           className="w-full h-[600px] bg-white"
           title={`${type} preview`}
           sandbox="allow-scripts allow-same-origin allow-forms"
