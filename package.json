@@ -27,7 +27,11 @@
     "test:path-migration": "npx vitest tests/path-migration.test.ts --run",
     "test:integration-file-ops": "npx vitest tests/integration-file-operations.test.ts --run",
     "test:performance": "npx vitest tests/performance-benchmarks.test.ts --run",
-    "test:all": "npm run test:sandbox-manager && npm run test:vite-process-manager && npm run test:vite-process-manager-vitest && npm run test:api-create-sandbox && npm run test:api-create-sandbox-vitest && npm run test:task-1-integration && npm run test:e2b-replacement && npm run test:task-2"
+    "test:task-9": "npm run test:task-9-verification && npm run test:task-9-functional && npm run test:task-9-unit",
+    "test:task-9-verification": "node tests/task-9-verification.js",
+    "test:task-9-functional": "node tests/task-9-functional.test.js",
+    "test:task-9-unit": "npm run test:vite-process-manager-vitest && npm run test:sandbox-manager-vitest",
+    "test:all": "npm run test:sandbox-manager && npm run test:vite-process-manager && npm run test:vite-process-manager-vitest && npm run test:api-create-sandbox && npm run test:api-create-sandbox-vitest && npm run test:task-1-integration && npm run test:e2b-replacement && npm run test:task-2 && npm run test:task-9"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",
