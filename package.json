@@ -8,10 +8,17 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:sandbox": "jest lib/__tests__/sandbox-manager.test.ts",
     "test:integration": "node tests/e2b-integration.test.js",
     "test:api": "node tests/api-endpoints.test.js",
     "test:code": "node tests/code-execution.test.js",
-    "test:all": "npm run test:integration && npm run test:api && npm run test:code"
+    "test:all": "npm run test:integration && npm run test:api && npm run test:code",
+    "test:unit": "jest --testPathPatterns=__tests__",
+    "test:performance": "jest --testPathPatterns=performance",
+    "test:ci": "jest --ci --coverage --watchAll=false"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^2.0.1",
@@ -45,11 +52,17 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4.1.11",
+    "@testing-library/jest-dom": "^6.7.0",
+    "@testing-library/react": "^16.3.0",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.4.3",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
     "tailwindcss": "^4.1.11",
     "typescript": "^5"
   }

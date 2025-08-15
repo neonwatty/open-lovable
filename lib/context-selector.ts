@@ -16,6 +16,22 @@ export function selectFilesForEdit(
   userPrompt: string,
   manifest: FileManifest
 ): FileContext {
+  // Handle undefined or null manifest, or empty files
+  if (!manifest || !manifest.files || Object.keys(manifest.files).length === 0) {
+    return {
+      primaryFiles: [],
+      contextFiles: [],
+      systemPrompt: 'No files available in the manifest.',
+      editIntent: {
+        type: EditType.ADD_FEATURE,
+        description: 'Creating new files due to empty manifest',
+        confidence: 0.5,
+        targetFiles: [],
+        suggestedContext: []
+      }
+    };
+  }
+
   // Analyze the edit intent
   const editIntent = analyzeEditIntent(userPrompt, manifest);
   
@@ -177,7 +193,7 @@ When user says "nav" or "navigation":
 Entry Point: ${manifest.entryPoint}
 
 ### Routes
-${manifest.routes.map(r => 
+${manifest.routes?.map(r => 
   `- ${r.path} → ${r.component.split('/').pop()}`
 ).join('\n') || 'No routes detected'}`;
 }
@@ -288,15 +304,28 @@ function buildComponentRelationships(
  */
 export async function getFileContents(
   files: string[],
-  manifest: FileManifest
-): Promise<Record<string, string>> {
-  const contents: Record<string, string> = {};
+  manifest: FileManifest,
+  fileCache?: Record<string, any>
+): Promise<Record<string, any>> {
+  const contents: Record<string, any> = {};
+  
+  // Handle undefined manifest
+  if (!manifest || !manifest.files) {
+    return contents;
+  }
   
   for (const file of files) {
-    const fileInfo = manifest.files[file];
-    if (fileInfo) {
-      contents[file] = fileInfo.content;
+    // First try the file cache if provided
+    if (fileCache && fileCache[file]) {
+      contents[file] = fileCache[file];
+    } else if (fileCache === undefined) {
+      // Only fall back to manifest content if fileCache is undefined (not explicitly null)
+      const fileInfo = manifest.files[file];
+      if (fileInfo) {
+        contents[file] = fileInfo.content;
+      }
     }
+    // If fileCache is explicitly null, don't fall back to manifest
   }
   
   return contents;
@@ -306,17 +335,32 @@ export async function getFileContents(
  * Format files for AI context
  */
 export function formatFilesForAI(
-  primaryFiles: Record<string, string>,
-  contextFiles: Record<string, string>
+  files: Record<string, any>,
+  contextFiles?: Record<string, any>
 ): string {
   const sections: string[] = [];
+  
+  // Handle empty files
+  if (!files || Object.keys(files).length === 0) {
+    return '';
+  }
   
   // Add primary files
   sections.push('## Files to Edit (ONLY OUTPUT THESE FILES)\n');
   sections.push('🚨 You MUST ONLY generate the files listed below. Do NOT generate any other files! 🚨\n');
   sections.push('⚠️ CRITICAL: Return the COMPLETE file - NEVER truncate with "..." or skip any lines! ⚠️\n');
   sections.push('The file MUST include ALL imports, ALL functions, ALL JSX, and ALL closing tags.\n\n');
-  for (const [path, content] of Object.entries(primaryFiles)) {
+  
+  for (const [path, fileData] of Object.entries(files)) {
+    let content = '';
+    if (typeof fileData === 'string') {
+      content = fileData;
+    } else if (fileData && typeof fileData === 'object' && fileData.content !== undefined) {
+      content = fileData.content || '';
+    } else {
+      content = String(fileData || '');
+    }
+    
     sections.push(`### ${path}
 **IMPORTANT: This is the COMPLETE file. Your output must include EVERY line shown below, modified only where necessary.**
 \`\`\`${getFileExtension(path)}
@@ -326,9 +370,18 @@ ${content}
   }
   
   // Add context files if any - but truncate large files
-  if (Object.keys(contextFiles).length > 0) {
+  if (contextFiles && Object.keys(contextFiles).length > 0) {
     sections.push('\n## Context Files (Reference Only - Do Not Edit)\n');
-    for (const [path, content] of Object.entries(contextFiles)) {
+    for (const [path, fileData] of Object.entries(contextFiles)) {
+      let content = '';
+      if (typeof fileData === 'string') {
+        content = fileData;
+      } else if (fileData && typeof fileData === 'object' && fileData.content !== undefined) {
+        content = fileData.content || '';
+      } else {
+        content = String(fileData || '');
+      }
+      
       // Truncate very large context files to save tokens
       let truncatedContent = content;
       if (content.length > 2000) {

@@ -7,6 +7,28 @@ export function analyzeEditIntent(
   prompt: string,
   manifest: FileManifest
 ): EditIntent {
+  // Handle undefined or null manifest
+  if (!manifest || !manifest.files) {
+    return {
+      type: EditType.ADD_FEATURE,
+      description: 'Creating new files due to empty manifest',
+      confidence: 0.5,
+      targetFiles: [],
+      suggestedContext: []
+    };
+  }
+
+  // Handle undefined or null prompt
+  if (!prompt || typeof prompt !== 'string') {
+    return {
+      type: EditType.UPDATE_COMPONENT,
+      description: 'Empty or invalid prompt',
+      confidence: 0.1,
+      targetFiles: [],
+      suggestedContext: []
+    };
+  }
+
   const lowerPrompt = prompt.toLowerCase();
   
   // Define intent patterns
@@ -14,9 +36,13 @@ export function analyzeEditIntent(
     {
       patterns: [
         /update\s+(the\s+)?(\w+)\s+(component|section|page)/i,
+        /update\s+(the\s+)?.*?(component|section|page)/i,
+        /update\s+(the\s+)?(\w+)\s+(logic|code|function|method|functionality)/i,
+        /update\s+(the\s+)?(\w+)/i,
         /change\s+(the\s+)?(\w+)/i,
         /modify\s+(the\s+)?(\w+)/i,
         /edit\s+(the\s+)?(\w+)/i,
+        /revise\s+(the\s+)?(\w+)/i,
         /fix\s+(the\s+)?(\w+)\s+(styling|style|css|layout)/i,
         /remove\s+.*\s+(button|link|text|element|section)/i,
         /delete\s+.*\s+(button|link|text|element|section)/i,
@@ -28,11 +54,13 @@ export function analyzeEditIntent(
     {
       patterns: [
         /add\s+(a\s+)?new\s+(\w+)\s+(page|section|feature|component)/i,
-        /create\s+(a\s+)?(\w+)\s+(page|section|feature|component)/i,
+        /create\s+(a\s+)?(\w+)\s+(page|section|feature|component|dialog|modal|form|spinner)/i,
         /implement\s+(a\s+)?(\w+)\s+(page|section|feature)/i,
-        /build\s+(a\s+)?(\w+)\s+(page|section|feature)/i,
+        /build\s+(a\s+)?(\w+)\s+(page|section|feature|form|component)/i,
         /add\s+(\w+)\s+to\s+(?:the\s+)?(\w+)/i,
         /add\s+(?:a\s+)?(\w+)\s+(?:component|section)/i,
+        /add\s+(?:a\s+)?(\w+)\s+(component|feature|page|section|modal|dialog|form|button|element)/i,
+        /insert\s+(?:a\s+)?(\w+)/i,
         /include\s+(?:a\s+)?(\w+)/i,
       ],
       type: EditType.ADD_FEATURE,
@@ -41,9 +69,10 @@ export function analyzeEditIntent(
     {
       patterns: [
         /fix\s+(the\s+)?(\w+|\w+\s+\w+)(?!\s+styling|\s+style)/i,
-        /resolve\s+(the\s+)?error/i,
+        /resolve\s+(the\s+)?(\w+|\w+\s+\w+)/i,
         /debug\s+(the\s+)?(\w+)/i,
         /repair\s+(the\s+)?(\w+)/i,
+        /correct\s+(the\s+)?(\w+|\w+\s+\w+)/i,
       ],
       type: EditType.FIX_ISSUE,
       fileResolver: (p, m) => findProblemFiles(p, m),
@@ -64,6 +93,8 @@ export function analyzeEditIntent(
         /clean\s+up\s+(the\s+)?code/i,
         /reorganize\s+(the\s+)?(\w+)/i,
         /optimize\s+(the\s+)?(\w+)/i,
+        /restructure\s+(the\s+)?(\w+)/i,
+        /improve\s+(the\s+)?(\w+)/i,
       ],
       type: EditType.REFACTOR,
       fileResolver: (p, m) => findRefactorTargets(p, m),
@@ -81,8 +112,10 @@ export function analyzeEditIntent(
     },
     {
       patterns: [
+        /update\s+package\.json/i,
         /install\s+(\w+)/i,
-        /add\s+(\w+)\s+(package|library|dependency)/i,
+        /add\s+.*?\s*(package|library|dependency)/i,
+        /add\s+.*?dependency/i,
         /use\s+(\w+)\s+(library|framework)/i,
       ],
       type: EditType.ADD_DEPENDENCY,
@@ -109,9 +142,10 @@ export function analyzeEditIntent(
   }
   
   // Default to component update if no pattern matches
+  const targetFiles = manifest.entryPoint && manifest.entryPoint.trim() ? [manifest.entryPoint] : [];
   return {
     type: EditType.UPDATE_COMPONENT,
-    targetFiles: [manifest.entryPoint],
+    targetFiles,
     confidence: 0.3,
     description: 'General update to application',
     suggestedContext: [],
@@ -125,21 +159,35 @@ function findComponentFiles(prompt: string, manifest: FileManifest): string[] {
   const files: string[] = [];
   const lowerPrompt = prompt.toLowerCase();
   
+  // Handle undefined or null manifest
+  if (!manifest || !manifest.files) {
+    console.log('[findComponentFiles] Manifest is undefined or has no files');
+    return files;
+  }
+  
   // Extract component names from prompt
   const componentWords = extractComponentNames(prompt);
   console.log('[findComponentFiles] Extracted words:', componentWords);
   
   // First pass: Look for exact component file matches
   for (const [path, fileInfo] of Object.entries(manifest.files)) {
-    // Check if file name or component name matches
+    // Check if file name, path, or component name matches
     const fileName = path.split('/').pop()?.toLowerCase() || '';
+    const fullPath = path.toLowerCase();
     const componentName = fileInfo.componentInfo?.name.toLowerCase();
     
     for (const word of componentWords) {
-      if (fileName.includes(word) || componentName?.includes(word)) {
+      if (fileName.includes(word) || fullPath.includes(word) || componentName?.includes(word)) {
         console.log(`[findComponentFiles] Match found: word="${word}" in file="${path}"`);
         files.push(path);
         break; // Stop after first match to avoid duplicates
+      }
+      
+      // Check semantic matches
+      if (isSemanticMatch(word, fileName) || isSemanticMatch(word, componentName || '')) {
+        console.log(`[findComponentFiles] Semantic match found: word="${word}" in file="${path}"`);
+        files.push(path);
+        break;
       }
     }
   }
@@ -156,7 +204,7 @@ function findComponentFiles(prompt: string, manifest: FileManifest): string[] {
           if (fileName.includes(element + '.') || fileName === element) {
             files.push(path);
             console.log(`[findComponentFiles] UI element match: element="${element}" in file="${path}"`);
-            return files; // Return immediately with just this file
+            break; // Exit loop when we find a match
           }
         }
         
@@ -166,15 +214,15 @@ function findComponentFiles(prompt: string, manifest: FileManifest): string[] {
           if (fileName.includes(element)) {
             files.push(path);
             console.log(`[findComponentFiles] UI element partial match: element="${element}" in file="${path}"`);
-            return files; // Return immediately with just this file
+            break; // Exit loop when we find a match
           }
         }
       }
     }
   }
   
-  // Limit results to most specific matches
-  if (files.length > 1) {
+  // Limit results to most specific matches, unless prompt mentions "all"
+  if (files.length > 1 && !prompt.toLowerCase().includes('all')) {
     console.log(`[findComponentFiles] Multiple files found (${files.length}), limiting to first match`);
     return [files[0]]; // Only return the first match
   }
@@ -297,6 +345,11 @@ function findRefactorTargets(prompt: string, manifest: FileManifest): string[] {
 function findPackageFiles(manifest: FileManifest): string[] {
   const files: string[] = [];
   
+  // Handle undefined or null manifest
+  if (!manifest || !manifest.files) {
+    return files;
+  }
+  
   for (const path of Object.keys(manifest.files)) {
     if (path.endsWith('package.json') || 
         path.endsWith('vite.config.js') ||
@@ -378,6 +431,47 @@ function extractComponentNames(prompt: string): string[] {
   }
   
   return words;
+}
+
+/**
+ * Check if two words are semantically related
+ */
+function isSemanticMatch(word: string, target: string): boolean {
+  if (!word || !target) return false;
+  
+  // Define semantic mappings
+  const semanticMappings: Record<string, string[]> = {
+    'authentication': ['auth', 'login', 'signin', 'user'],
+    'auth': ['authentication', 'login', 'signin', 'user'],
+    'login': ['auth', 'authentication', 'signin'],
+    'navigation': ['nav', 'navbar', 'menu'],
+    'nav': ['navigation', 'navbar', 'menu'],
+    'button': ['btn', 'click', 'submit'],
+    'form': ['input', 'field', 'validation'],
+    'validation': ['validate', 'form', 'field'],
+    'modal': ['popup', 'dialog', 'overlay'],
+    'popup': ['modal', 'dialog', 'overlay'],
+    'dashboard': ['dash', 'overview', 'home'],
+    'profile': ['user', 'account', 'settings'],
+    'settings': ['config', 'preferences', 'options']
+  };
+  
+  const lowerWord = word.toLowerCase();
+  const lowerTarget = target.toLowerCase();
+  
+  // Check if target contains any semantic matches for the word
+  if (semanticMappings[lowerWord]) {
+    return semanticMappings[lowerWord].some(synonym => lowerTarget.includes(synonym));
+  }
+  
+  // Check reverse mapping
+  for (const [key, synonyms] of Object.entries(semanticMappings)) {
+    if (synonyms.includes(lowerWord) && lowerTarget.includes(key)) {
+      return true;
+    }
+  }
+  
+  return false;
 }
 
 /**
@@ -476,7 +570,37 @@ function calculateConfidence(
     }
   }
   
+  // Lower confidence for vague/ambiguous words
+  const vagueness = calculateVagueness(prompt);
+  confidence -= vagueness;
+  
   return Math.min(confidence, 1.0);
+}
+
+/**
+ * Calculate vagueness penalty for ambiguous prompts
+ */
+function calculateVagueness(prompt: string): number {
+  const words = prompt.toLowerCase().split(/\s+/);
+  const vagueWords = ['things', 'stuff', 'something', 'anything', 'everything', 'it', 'this', 'that'];
+  const ambiguousWords = ['better', 'good', 'nice', 'wrong', 'bad', 'fine', 'ok', 'okay'];
+  
+  let vagueness = 0;
+  
+  for (const word of words) {
+    if (vagueWords.includes(word)) {
+      vagueness += 0.3; // Heavy penalty for very vague words
+    } else if (ambiguousWords.includes(word)) {
+      vagueness += 0.2; // Medium penalty for ambiguous words
+    }
+  }
+  
+  // Additional penalty for very short prompts (likely too vague)
+  if (words.length <= 2) {
+    vagueness += 0.1;
+  }
+  
+  return Math.min(vagueness, 0.8); // Cap maximum penalty
 }
 
 /**
@@ -487,7 +611,7 @@ function generateDescription(
   prompt: string,
   targetFiles: string[]
 ): string {
-  const fileNames = targetFiles.map(f => f.split('/').pop()).join(', ');
+  const fileNames = targetFiles.filter(f => f && typeof f === 'string').map(f => f.split('/').pop()).join(', ');
   
   switch (type) {
     case EditType.UPDATE_COMPONENT:
