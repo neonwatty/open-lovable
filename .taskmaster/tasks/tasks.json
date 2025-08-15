@@ -62,7 +62,7 @@
               "1.4"
             ],
             "details": "Create PortManager class in /lib/port-manager.ts for dynamic port allocation starting from 5173. Implement port availability checking using net.createServer() test. Add port reservation and release mechanisms tied to sandbox lifecycle. Generate localhost URLs with proper protocol and port (http://localhost:PORT). Implement port conflict resolution with automatic reassignment. Create URL mapping for multiple concurrent sandboxes. Add CORS configuration for local development server access.\n<info added on 2025-08-15T14:56:45.324Z>\nEnhanced testing strategy incorporating comprehensive mocking techniques and concurrent scenarios. Unit tests will mock net module completely using jest.mock('net') to prevent real network operations during testing. Sequential and concurrent port allocation tests using Promise.all to simulate multiple sandbox instances requesting ports simultaneously. Port reservation tracking implemented with jest.fn() spies to verify reservation/release call patterns. Protocol validation tests for localhost URL generation ensuring proper http:// prefix. Port conflict simulation by pre-occupying test ports to validate reassignment logic. Integration tests using supertest for actual network connection validation. CORS header validation tests confirming proper Access-Control-Allow-Origin configuration. Error handling tests for port exhaustion scenarios within 5173-5200 range. Performance testing with jest fake timers for rapid allocation/deallocation cycles. Sandbox termination cleanup tests ensuring ports are properly released. Multi-instance concurrent testing to validate thread-safe port management operations.\n</info added on 2025-08-15T14:56:45.324Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for PortManager class using Jest. Mock net.createServer() to test port availability checking. Test port allocation starting from 5173 with incremental allocation. Test port reservation and release mechanisms with concurrent access. Test localhost URL generation for different ports. Integration tests for port conflict resolution with actual net connections. Test CORS configuration setup. Test error handling for port allocation failures and exhausted port ranges. Performance tests for rapid port allocation/deallocation cycles."
           },
           {
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-15T16:25:41.607Z",
+      "updated": "2025-08-15T16:33:52.783Z",
       "description": "Tasks for master context"
     }
   }
