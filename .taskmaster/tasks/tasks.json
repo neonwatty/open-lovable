@@ -77,7 +77,7 @@
               "1.5"
             ],
             "details": "Create cleanup service in /lib/cleanup-service.ts with scheduled and on-demand cleanup. Implement zombie process detection using process.kill(pid, 0) technique. Add graceful shutdown handlers for SIGINT/SIGTERM events. Create error recovery mechanisms for corrupted sandbox states. Implement automatic port release on process termination. Add comprehensive try-catch blocks with specific error types. Create cleanup logging for debugging and monitoring. Implement sandbox timeout and automatic termination after inactivity.\n<info added on 2025-08-15T14:57:09.514Z>\nTest error recovery mechanisms using jest.restoreAllMocks() to reset process mocks between tests. Test automatic port release by verifying cleanupService.releasePort() is called on process termination events. Use jest.useFakeTimers() for scheduled cleanup testing and jest.runAllTimers() to trigger cleanup cycles. Create mock corrupted sandbox data with invalid JSON, missing files, and undefined process IDs to test error recovery. Mock logger.error(), logger.warn(), and logger.info() calls to verify proper cleanup logging. Use process.emit('SIGINT') and process.emit('SIGTERM') in tests to simulate graceful shutdown scenarios. Test zombie process detection with jest.spyOn(process, 'kill').mockImplementation() returning different error codes (ESRCH for dead processes, EPERM for permission errors). Create integration tests that spawn real child processes and verify cleanup removes them properly. Test memory leak detection by monitoring process.memoryUsage() before and after cleanup operations. Use jest.setTimeout() to extend timeout for performance tests under simulated high load conditions with multiple concurrent cleanup operations.\n</info added on 2025-08-15T14:57:09.514Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for CleanupService class using Jest. Mock process.kill(pid, 0) for zombie process detection. Test graceful shutdown handlers for SIGINT/SIGTERM events. Test error recovery mechanisms with corrupted state scenarios. Test automatic port release on process termination. Integration tests for scheduled cleanup with real timers. Test comprehensive try-catch error handling with various error types. Test cleanup logging with mock logger. Test sandbox timeout and termination scenarios. E2E tests for complete cleanup on application shutdown."
           }
         ]
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-15T16:33:52.783Z",
+      "updated": "2025-08-15T18:42:41.863Z",
       "description": "Tasks for master context"
     }
   }
