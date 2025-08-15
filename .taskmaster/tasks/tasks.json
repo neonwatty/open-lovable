@@ -50,7 +50,7 @@
               "1.2"
             ],
             "details": "Build SandboxStateStore in /lib/sandbox-state.ts using Map or similar data structure. Track sandbox metadata including ID, directory path, process PID, port number, and creation timestamp. Implement state persistence to survive application restarts using JSON file or SQLite. Add methods for registerSandbox(), updateSandboxState(), and getSandboxState(). Create event emitters for sandbox lifecycle events. Implement automatic state cleanup for terminated processes. Add concurrent sandbox limit management.\n<info added on 2025-08-15T14:56:17.581Z>\nPerformance tests for rapid state updates and concurrent access scenarios. Mock process operations using jest.spyOn(process, 'kill') to simulate process status checks. Test event emitter memory leak prevention with jest to verify listeners are properly removed. Add stress testing for 100+ concurrent sandbox registrations using Promise.allSettled. Test JSON file corruption recovery with invalid JSON data and missing file scenarios. Mock fs/promises operations for reliable test isolation. Test state synchronization across multiple SandboxStateStore instances. Add performance benchmarks for state retrieval with large datasets (1000+ sandbox entries).\n</info added on 2025-08-15T14:56:17.581Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for SandboxStateStore class using Jest. Mock Map/JSON file operations for state persistence. Test registerSandbox(), updateSandboxState(), getSandboxState() methods with various data types. Test event emitter functionality for sandbox lifecycle events. Test state cleanup for terminated processes with mocked process.kill checks. Test concurrent sandbox limit management. Integration tests for state persistence across application restarts using temporary JSON files. Test error handling for corrupted state files and missing process IDs."
           },
           {
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-14T23:54:49.493Z",
+      "updated": "2025-08-15T16:25:41.607Z",
       "description": "Tasks for master context"
     }
   }
