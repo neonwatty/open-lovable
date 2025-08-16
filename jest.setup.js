@@ -31,6 +31,75 @@ jest.mock('next/headers', () => ({
   cookies: jest.fn(() => new Map()),
 }))
 
+// Mock Cookies for Next.js edge runtime
+global.Headers = global.Headers || Map
+if (typeof global.Headers === 'undefined') {
+  global.Headers = class MockHeaders extends Map {
+    get(key) {
+      return super.get(key?.toLowerCase?.())
+    }
+    set(key, value) {
+      return super.set(key?.toLowerCase?.(), value)
+    }
+    has(key) {
+      return super.has(key?.toLowerCase?.())
+    }
+  }
+}
+
+// Polyfill for Node.js environment tests
+if (typeof global.ReadableStream === 'undefined') {
+  const { ReadableStream } = require('node:stream/web')
+  global.ReadableStream = ReadableStream
+}
+
+if (typeof global.WritableStream === 'undefined') {
+  const { WritableStream } = require('node:stream/web')
+  global.WritableStream = WritableStream
+}
+
+if (typeof global.TransformStream === 'undefined') {
+  const { TransformStream } = require('node:stream/web')
+  global.TransformStream = TransformStream
+}
+
+// Add Response polyfill for Node.js tests
+if (typeof global.Response === 'undefined' || process.env.JEST_WORKER_ID !== undefined) {
+  class MockResponse {
+    constructor(body, init) {
+      this.body = body
+      this.status = init?.status || 200
+      this.statusText = init?.statusText || 'OK'
+      
+      const headers = new Map()
+      if (init?.headers) {
+        if (init.headers instanceof Headers) {
+          init.headers.forEach((value, key) => headers.set(key, value))
+        } else if (typeof init.headers === 'object') {
+          Object.entries(init.headers).forEach(([key, value]) => headers.set(key, value))
+        }
+      }
+      
+      this.headers = {
+        get: (key) => headers.get(key),
+        set: (key, value) => headers.set(key, value),
+        has: (key) => headers.has(key),
+        forEach: (callback) => headers.forEach(callback)
+      }
+    }
+    
+    async json() {
+      return Promise.resolve(this.body)
+    }
+    
+    async text() {
+      return Promise.resolve(this.body)
+    }
+  }
+  
+  global.Response = MockResponse
+}
+
 // Mock Next.js server web APIs
 global.Request = jest.fn().mockImplementation((url, options) => ({
   url,
@@ -38,12 +107,35 @@ global.Request = jest.fn().mockImplementation((url, options) => ({
   json: jest.fn().mockResolvedValue({}),
 }))
 
-global.Response = {
-  json: jest.fn().mockImplementation((data, init) => ({
-    json: () => Promise.resolve(data),
-    status: init?.status || 200,
-    ...init,
+// Mock RequestCookies for NextRequest
+jest.mock('next/dist/compiled/@edge-runtime/cookies/index.js', () => ({
+  RequestCookies: jest.fn().mockImplementation(() => ({
+    get: jest.fn(),
+    getAll: jest.fn(() => []),
+    has: jest.fn(() => false),
+    set: jest.fn(),
+    delete: jest.fn()
   })),
+  ResponseCookies: jest.fn().mockImplementation(() => ({
+    get: jest.fn(),
+    getAll: jest.fn(() => []),
+    has: jest.fn(() => false),
+    set: jest.fn(),
+    delete: jest.fn()
+  }))
+}))
+
+// Add Response.json static method
+if (global.Response) {
+  global.Response.json = jest.fn().mockImplementation((data, init) => {
+    return new global.Response(JSON.stringify(data), {
+      status: init?.status || 200,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers
+      }
+    })
+  })
 }
 
 // Global test configuration
@@ -57,3 +149,13 @@ afterEach(() => {
   // Cleanup any test artifacts
   jest.restoreAllMocks()
 })
+
+// Mock LocalFileCacheAdapter after other mocks
+jest.mock('./lib/local-file-cache', () => ({
+  LocalFileCacheAdapter: {
+    getFiles: jest.fn().mockResolvedValue({}),
+    updateFile: jest.fn().mockResolvedValue(undefined),
+    getManifest: jest.fn().mockResolvedValue(undefined),
+    setManifest: jest.fn().mockResolvedValue(undefined),
+  }
+}))

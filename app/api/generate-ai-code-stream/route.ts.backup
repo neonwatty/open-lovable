@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SandboxState } from '@/types/sandbox';
-import { selectFilesForEdit, getFileContents, formatFilesForAI } from '@/lib/context-selector';
+import { 
+  selectFilesForEdit, 
+  getFileContents, 
+  formatFilesForAI,
+  selectFilesForClaudeCode,
+  updateContextWithScrapedData,
+  getContextMetadata
+} from '@/lib/context-selector';
 import { executeSearchPlan, formatSearchResultsForAI, selectTargetFile } from '@/lib/file-search-executor';
 import { FileManifest } from '@/types/file-manifest';
 import type { ConversationState, ConversationMessage, ConversationEdit } from '@/types/conversation';
@@ -12,7 +19,7 @@ import {
 } from '@/lib/local-file-cache';
 import { 
   formatPromptForClaudeCode, 
-  claudeCodePromptToMarkdown
+  claudeCodePromptToMarkdown,
 } from '@/lib/claude-code-prompt-formatter';
 import { 
   parseClaudeCodeResponse as parseAdvanced,
@@ -67,7 +74,19 @@ declare global {
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, model = 'openai/gpt-oss-20b', context, isEdit = false } = await request.json();
+    const requestBody = await request.json();
+    
+    const { prompt, model = 'openai/gpt-oss-20b', context, isEdit = false } = requestBody;
+    
+    // Handle legacy request format where sandboxId is at the top level
+    if (!context && requestBody.sandboxId) {
+      context = {
+        sandboxId: requestBody.sandboxId,
+        currentFiles: requestBody.currentFiles || undefined,
+        structure: requestBody.structure || undefined,
+        conversationContext: requestBody.conversationContext || undefined
+      };
+    }
     
     console.log('[generate-ai-code-stream] Received request:');
     console.log('[generate-ai-code-stream] - prompt:', prompt);
@@ -130,15 +149,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
     
-    // Create a stream for real-time updates
-    const encoder = new TextEncoder();
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
+    // Create custom stream handler for real-time updates
+    const { CustomStreamHandler, createSSEResponse } = await import('@/lib/custom-stream-handler');
+    const streamHandler = new CustomStreamHandler({
+      timeout: 120000, // 2 minutes
+      enableParsing: true,
+      enablePartialResponse: true
+    });
     
-    // Function to send progress updates
+    // Create the SSE stream
+    const sseStream = streamHandler.createStream();
+    
+    // Function to send progress updates (maintaining compatibility)
     const sendProgress = async (data: any) => {
-      const message = `data: ${JSON.stringify(data)}\n\n`;
-      await writer.write(encoder.encode(message));
+      await streamHandler.sendProgress(data);
     };
     
     // Start processing in background
@@ -227,6 +251,7 @@ export async function POST(request: NextRequest) {
                     
                     // Create surgical edit context with exact location
                     const normalizedPath = target.filePath.replace('/home/user/app/', '');
+                    const fileContent = fileContents[normalizedPath]?.content || '';
                     
                     // Build enhanced context with search results
                     enhancedSystemPrompt = `
@@ -555,11 +580,7 @@ Remember: You are a SURGEON making a precise incision, not an artist repainting 
           }
         }
         
-        // Build system prompt with conversation awareness (used in Claude Code integration below)
-        enhancedSystemPrompt = `${conversationContext}
-
-🚨 CRITICAL RULES - YOUR MOST IMPORTANT INSTRUCTIONS:
-1. **DO EXACTLY WHAT IS ASKED - NOTHING MORE, NOTHING LESS**
+        // System prompt will be built directly in the AI call below
    - Don't add features not requested
    - Don't fix unrelated issues
    - Don't improve things not mentioned
@@ -902,7 +923,6 @@ CRITICAL: When files are provided in the context:
 5. Make the requested change immediately`;
 
         // Build full prompt with context
-        let fullPrompt = prompt;
         if (context) {
           const contextParts = [];
           
@@ -1110,9 +1130,7 @@ CRITICAL: When files are provided in the context:
             }
           }
           
-          if (contextParts.length > 0) {
-            fullPrompt = `CONTEXT:\n${contextParts.join('\n')}\n\nUSER REQUEST:\n${prompt}`;
-          }
+          // Context parts built for potential use in Claude Code integration
         }
         
         await sendProgress({ type: 'status', message: 'Planning application structure...' });
@@ -1121,6 +1139,59 @@ CRITICAL: When files are provided in the context:
         
         // Track packages that need to be installed
         const packagesToInstall: string[] = [];
+        
+        // Enhanced context management with Claude Code integration
+        let claudeCodeContext: any = undefined;
+        
+        if (global.conversationState && isEdit) {
+          try {
+            const manifest = await LocalFileCacheAdapter.getManifest();
+            const fileContents = await LocalFileCacheAdapter.getFiles();
+            
+            if (manifest) {
+              // Use Claude Code context manager for enhanced context
+              const claudeCodeFileContext = selectFilesForClaudeCode(
+                prompt,
+                manifest,
+                global.conversationState,
+                Object.fromEntries(
+                  Object.entries(fileContents).map(([path, data]) => [path, data.content])
+                )
+              );
+              
+              // Add scraped website context if available
+              if (context?.conversationContext?.scrapedWebsites?.length) {
+                let updatedContext = claudeCodeFileContext;
+                for (const site of context.conversationContext.scrapedWebsites) {
+                  updatedContext = updateContextWithScrapedData(updatedContext, {
+                    url: site.url,
+                    content: site.content
+                  });
+                }
+                claudeCodeContext = {
+                  contextWindow: updatedContext.contextWindow,
+                  formattedContext: updatedContext.formattedContext
+                };
+              } else {
+                claudeCodeContext = {
+                  contextWindow: claudeCodeFileContext.contextWindow,
+                  formattedContext: claudeCodeFileContext.formattedContext
+                };
+              }
+              
+              // Log context metadata for debugging
+              const metadata = getContextMetadata(claudeCodeFileContext);
+              console.log('[generate-ai-code-stream] Context metadata:', metadata);
+              
+              await sendProgress({ 
+                type: 'status', 
+                message: `Context: ${metadata.messagesCount} messages, ${metadata.tokensUsed} tokens`
+              });
+            }
+          } catch (error) {
+            console.warn('[generate-ai-code-stream] Failed to build enhanced context:', error);
+          }
+        }
         
         // Format the prompt using the new Claude Code prompt formatter
         const claudeCodePrompt = formatPromptForClaudeCode(
@@ -1133,7 +1204,8 @@ CRITICAL: When files are provided in the context:
               scrapedWebsites: context?.conversationContext?.scrapedWebsites || [],
               currentProject: context?.conversationContext?.currentProject,
               messages: global.conversationState?.context.messages.slice(-5) || []
-            }
+            },
+            claudeCodeContext: claudeCodeContext
           },
           model,
           isEdit,
@@ -1163,132 +1235,42 @@ CRITICAL: When files are provided in the context:
           sessionId: context?.sandboxId
         });
         
-        // Stream the response and parse in real-time
+        // Use enhanced streaming with incremental parsing
         let generatedCode = '';
-        let currentFile = '';
-        let currentFilePath = '';
         let componentCount = 0;
-        let isInFile = false;
-        let isInTag = false;
-        let conversationalBuffer = '';
         
-        // Buffer for incomplete tags
-        let tagBuffer = '';
-        
-        // Stream the response and parse for packages in real-time
+        // Stream the response using custom handler
         for await (const textPart of result.textStream) {
           const text = textPart || '';
           generatedCode += text;
-          currentFile += text;
-          
-          // Combine with buffer for tag detection
-          const searchText = tagBuffer + text;
           
           // Log streaming chunks to console
           process.stdout.write(text);
           
-          // Check if we're entering or leaving a tag
-          const hasOpenTag = /<(file|package|packages|explanation|command|structure|template)\b/.test(text);
-          const hasCloseTag = /<\/(file|package|packages|explanation|command|structure|template)>/.test(text);
+          // Use custom stream handler for parsing and progress updates
+          await streamHandler.sendText(text, true);
           
-          if (hasOpenTag) {
-            // Send any buffered conversational text before the tag
-            if (conversationalBuffer.trim() && !isInTag) {
-              await sendProgress({ 
-                type: 'conversation', 
-                text: conversationalBuffer.trim()
-              });
-              conversationalBuffer = '';
-            }
-            isInTag = true;
-          }
-          
-          if (hasCloseTag) {
-            isInTag = false;
-          }
-          
-          // If we're not in a tag, buffer as conversational text
-          if (!isInTag && !hasOpenTag) {
-            conversationalBuffer += text;
-          }
-          
-          // Stream the raw text for live preview
-          await sendProgress({ 
-            type: 'stream', 
-            text: text,
-            raw: true 
-          });
-          
-          // Check for package tags in buffered text (ONLY for edits, not initial generation)
-          let lastIndex = 0;
+          // Additional package detection for edits
           if (isEdit) {
             const packageRegex = /<package>([^<]+)<\/package>/g;
             let packageMatch;
             
-            while ((packageMatch = packageRegex.exec(searchText)) !== null) {
+            while ((packageMatch = packageRegex.exec(text)) !== null) {
               const packageName = packageMatch[1].trim();
               if (packageName && !packagesToInstall.includes(packageName)) {
                 packagesToInstall.push(packageName);
                 console.log(`[generate-ai-code-stream] Package detected: ${packageName}`);
-                await sendProgress({ 
-                  type: 'package', 
-                  name: packageName,
-                  message: `Package detected: ${packageName}`
-                });
               }
-              lastIndex = packageMatch.index + packageMatch[0].length;
             }
           }
           
-          // Keep unmatched portion in buffer for next iteration
-          tagBuffer = searchText.substring(Math.max(0, lastIndex - 50)); // Keep last 50 chars
-          
-          // Check for file boundaries
-          if (text.includes('<file path="')) {
-            const pathMatch = text.match(/<file path="([^"]+)"/);
-            if (pathMatch) {
-              currentFilePath = pathMatch[1];
-              isInFile = true;
-              currentFile = text;
-            }
-          }
-          
-          // Check for file end
-          if (isInFile && currentFile.includes('</file>')) {
-            isInFile = false;
-            
-            // Send component progress update
-            if (currentFilePath.includes('components/')) {
-              componentCount++;
-              const componentName = currentFilePath.split('/').pop()?.replace('.jsx', '') || 'Component';
-              await sendProgress({ 
-                type: 'component', 
-                name: componentName,
-                path: currentFilePath,
-                index: componentCount
-              });
-            } else if (currentFilePath.includes('App.jsx')) {
-              await sendProgress({ 
-                type: 'app', 
-                message: 'Generated main App.jsx',
-                path: currentFilePath
-              });
-            }
-            
-            currentFile = '';
-            currentFilePath = '';
+          // Track component count for compatibility
+          if (text.includes('<file path="') && text.includes('components/')) {
+            componentCount++;
           }
         }
         
         console.log('\n\n[generate-ai-code-stream] Streaming complete.');
-        
-        // Send any remaining conversational text
-        if (conversationalBuffer.trim()) {
-          await sendProgress({ 
-            type: 'conversation', 
-            text: conversationalBuffer.trim()
-          });
-        }
         
         // Also parse <packages> tag for multiple packages - ONLY for edits
         if (isEdit) {
@@ -1447,11 +1429,7 @@ CRITICAL: When files are provided in the context:
         if (truncationWarnings.length > 0 && appConfig.codeApplication.enableTruncationRecovery) {
           console.warn('[generate-ai-code-stream] Truncation detected, attempting to fix:', truncationWarnings);
           
-          await sendProgress({
-            type: 'warning',
-            message: 'Detected incomplete code generation. Attempting to complete...',
-            warnings: truncationWarnings
-          });
+          await streamHandler.sendWarning('Detected incomplete code generation. Attempting to complete...', truncationWarnings);
           
           // Try to fix truncated files automatically
           const truncatedFiles: string[] = [];
@@ -1498,20 +1476,12 @@ CRITICAL: When files are provided in the context:
             console.log('[generate-ai-code-stream] Attempting to regenerate truncated files:', truncatedFiles);
             
             for (const filePath of truncatedFiles) {
-              await sendProgress({
+              await streamHandler.sendProgress({
                 type: 'info',
                 message: `Completing ${filePath}...`
               });
               
               try {
-                // Create a focused prompt to complete just this file
-                const completionPrompt = `Complete the following file that was truncated. Provide the FULL file content.
-                
-File: ${filePath}
-Original request: ${prompt}
-                
-Provide the complete file content without any truncation. Include all necessary imports, complete all functions, and close all tags properly.`;
-                
                 // Completion logic will be implemented when Claude Code integration is complete
                 // For now, provide a simple placeholder completion
                 const completedContent = `// File completion pending Claude Code integration
@@ -1543,16 +1513,13 @@ export default function PlaceholderComponent() {
                 
               } catch (completionError) {
                 console.error(`[generate-ai-code-stream] Failed to complete ${filePath}:`, completionError);
-                await sendProgress({
-                  type: 'warning',
-                  message: `Could not auto-complete ${filePath}. Manual review may be needed.`
-                });
+                await streamHandler.sendWarning(`Could not auto-complete ${filePath}. Manual review may be needed.`);
               }
             }
             
             // Clear the warnings after attempting fixes
             truncationWarnings.length = 0;
-            await sendProgress({
+            await streamHandler.sendProgress({
               type: 'info',
               message: 'Truncation recovery complete'
             });
@@ -1560,8 +1527,7 @@ export default function PlaceholderComponent() {
         }
         
         // Send completion with packages info
-        await sendProgress({ 
-          type: 'complete', 
+        await streamHandler.sendComplete({
           generatedCode,
           explanation,
           files: files.length,
@@ -1605,32 +1571,18 @@ export default function PlaceholderComponent() {
         // Check if it's a tool validation error
         if ((error as any).message?.includes('tool call validation failed')) {
           console.error('[generate-ai-code-stream] Tool call validation error - this may be due to the AI model sending incorrect parameters');
-          await sendProgress({ 
-            type: 'warning', 
-            message: 'Package installation tool encountered an issue. Packages will be detected from imports instead.'
-          });
+          await streamHandler.sendWarning('Package installation tool encountered an issue. Packages will be detected from imports instead.');
           // Continue processing - packages can still be detected from the code
         } else {
-          await sendProgress({ 
-            type: 'error', 
-            error: (error as Error).message 
-          });
+          await streamHandler.sendError((error as Error).message);
         }
       } finally {
-        await writer.close();
+        streamHandler.end();
       }
     })();
     
-    // Return the stream
-    return new Response(stream.readable, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-    });
+    // Return the custom SSE stream
+    return createSSEResponse(sseStream);
     
   } catch (error) {
     console.error('[generate-ai-code-stream] Error:', error);

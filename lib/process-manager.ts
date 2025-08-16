@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
+import { createServer } from 'net';
 
 export interface ProcessInfo {
   pid: number;
@@ -296,8 +297,6 @@ export class ProcessManager extends EventEmitter {
 
   private async isPortAvailable(port: number): Promise<boolean> {
     return new Promise((resolve) => {
-      const net = require('net');
-      const { createServer } = net;
       const server = createServer();
       
       server.listen(port, () => {

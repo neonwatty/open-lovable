@@ -2,7 +2,7 @@
  * Claude Code Integration
  * 
  * Simplified integration layer for using Claude Code in the Next.js application.
- * Provides a drop-in replacement for AI SDK functionality.
+ * Provides a drop-in replacement for AI SDK functionality with custom streaming.
  */
 
 import { promises as fs } from 'fs';
@@ -16,6 +16,12 @@ import {
   parseClaudeCodeResponse,
   formatParseResults 
 } from './claude-code-block-parser';
+import { 
+  CustomStreamHandler, 
+  AdvancedStreamHandler,
+  createSSEResponse,
+  simulateStreaming 
+} from './custom-stream-handler';
 import type { ClaudeCodePromptContext } from './claude-code-prompt-formatter';
 
 export interface ClaudeCodeStreamOptions {
@@ -33,94 +39,85 @@ export interface ClaudeCodeTextPart {
 }
 
 /**
- * Mock Claude Code stream that provides file-by-file streaming simulation
+ * Enhanced Claude Code stream with custom streaming support
  */
 export class ClaudeCodeTextStream {
-  private parts: ClaudeCodeTextPart[];
-  private currentIndex: number = 0;
+  private handler: AdvancedStreamHandler;
+  private response: string;
   private delay: number;
 
-  constructor(response: string, delay: number = 100) {
+  constructor(response: string, delay: number = 50) {
+    this.response = response;
     this.delay = delay;
-    this.parts = this.parseResponseIntoParts(response);
+    this.handler = new AdvancedStreamHandler({
+      enableParsing: true,
+      enablePartialResponse: true
+    });
   }
 
   async *[Symbol.asyncIterator](): AsyncIterator<string> {
-    for (const part of this.parts) {
-      // Add realistic delay between parts
-      if (this.currentIndex > 0) {
-        await new Promise(resolve => setTimeout(resolve, this.delay));
-      }
-      
-      yield part.text;
-      this.currentIndex++;
-    }
-  }
-
-  private parseResponseIntoParts(response: string): ClaudeCodeTextPart[] {
-    const parts: ClaudeCodeTextPart[] = [];
-    
-    // Split response into logical chunks for streaming
-    const lines = response.split('\n');
+    // Split response into realistic chunks
+    const lines = this.response.split('\n');
     let currentChunk = '';
-    let inFileBlock = false;
     
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const isLastLine = i === lines.length - 1;
-      currentChunk += line + (isLastLine ? '' : '\n');
+      currentChunk = line + (isLastLine ? '' : '\n');
       
-      // Check for file block boundaries
-      if (line.includes('<file path=')) {
-        inFileBlock = true;
-      } else if (line.includes('</file>')) {
-        inFileBlock = false;
-        // End of file block - emit this chunk
-        parts.push({
-          text: currentChunk,
-          type: 'file'
-        });
-        currentChunk = '';
-        continue;
-      }
+      // Process through handler for parsing
+      await this.handler.processText(currentChunk);
       
-      // Emit chunks at logical boundaries when not in file block
-      if (!inFileBlock && (
-        line.trim() === '' ||
-        line.startsWith('##') ||
-        line.startsWith('#') ||
-        currentChunk.length > 200
-      )) {
-        if (currentChunk.trim()) {
-          parts.push({
-            text: currentChunk,
-            type: 'text'
-          });
-          currentChunk = '';
-        }
+      // Yield the text chunk
+      yield currentChunk;
+      
+      // Add realistic delay between lines
+      if (!isLastLine && this.delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.delay));
       }
     }
-    
-    // Add any remaining content
-    if (currentChunk.trim()) {
-      parts.push({
-        text: currentChunk,
-        type: 'text'
-      });
-    }
-    
-    return parts;
+  }
+
+  /**
+   * Get the stream handler for additional functionality
+   */
+  getHandler(): AdvancedStreamHandler {
+    return this.handler;
+  }
+
+  /**
+   * Get final parsing results
+   */
+  getFinalResults() {
+    return this.handler.getFinalResults();
   }
 }
 
 /**
- * Mock result object compatible with AI SDK streamText
+ * Enhanced result object with custom streaming support
  */
 export class ClaudeCodeResult {
   public textStream: ClaudeCodeTextStream;
+  public streamHandler: AdvancedStreamHandler;
   
-  constructor(response: string) {
-    this.textStream = new ClaudeCodeTextStream(response);
+  constructor(response: string, streamDelay: number = 50) {
+    this.textStream = new ClaudeCodeTextStream(response, streamDelay);
+    this.streamHandler = this.textStream.getHandler();
+  }
+
+  /**
+   * Create a Server-Sent Events stream
+   */
+  createSSEStream(): Response {
+    const stream = this.streamHandler.createStream();
+    return createSSEResponse(stream);
+  }
+
+  /**
+   * Get final results after streaming
+   */
+  getFinalResults() {
+    return this.textStream.getFinalResults();
   }
 }
 

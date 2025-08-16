@@ -202,7 +202,7 @@ describe('SandboxManager React Integration', () => {
 
       // Add a delay to simulate async operation
       mockCreateSandbox.mockImplementation(() => 
-        new Promise(resolve => setTimeout(() => resolve(mockSandbox), 50))
+        new Promise(resolve => setTimeout(() => resolve(mockSandbox), 100))
       );
 
       render(<TestSandboxComponent />);
@@ -210,8 +210,10 @@ describe('SandboxManager React Integration', () => {
       const createButton = screen.getByTestId('create-sandbox-btn');
       await user.click(createButton);
 
-      // Check for loading state
-      expect(screen.getByText('Creating...')).toBeInTheDocument();
+      // Check for loading state - wait for it to appear
+      await waitFor(() => {
+        expect(screen.getByText('Creating...')).toBeInTheDocument();
+      });
       expect(createButton).toBeDisabled();
       
       await waitFor(() => {
@@ -240,7 +242,9 @@ describe('SandboxManager React Integration', () => {
       await user.click(createButton);
 
       expect(createButton).toBeDisabled();
-      expect(screen.getByText('Creating...')).toBeInTheDocument();
+      await waitFor(() => {
+        expect(screen.getByText('Creating...')).toBeInTheDocument();
+      });
 
       await waitFor(() => {
         expect(screen.getByText('Create Sandbox')).toBeInTheDocument();

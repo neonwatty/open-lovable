@@ -1,12 +1,23 @@
 import { FileManifest, EditIntent, EditType } from '@/types/file-manifest';
 import { analyzeEditIntent } from '@/lib/edit-intent-analyzer';
 import { getEditExamplesPrompt, getComponentPatternPrompt } from '@/lib/edit-examples';
+import { 
+  getClaudeCodeContextManager, 
+  ClaudeCodeContextWindow,
+  formatContextForClaudeCode 
+} from '@/lib/claude-code-context-manager';
+import type { ConversationState } from '@/types/conversation';
 
 export interface FileContext {
   primaryFiles: string[]; // Files to edit
   contextFiles: string[]; // Files to include for reference
   systemPrompt: string;   // Enhanced prompt with file info
   editIntent: EditIntent;
+}
+
+export interface ClaudeCodeFileContext extends FileContext {
+  contextWindow: ClaudeCodeContextWindow;
+  formattedContext: string;
 }
 
 /**
@@ -413,4 +424,142 @@ function getFileExtension(path: string): string {
     'json': 'json',
   };
   return mapping[ext] || ext;
+}
+
+/**
+ * Select files and build Claude Code context for conversation-aware editing
+ */
+export function selectFilesForClaudeCode(
+  userPrompt: string,
+  manifest: FileManifest,
+  conversationState?: ConversationState,
+  currentFiles?: Record<string, string>
+): ClaudeCodeFileContext {
+  // Start with basic file selection
+  const baseContext = selectFilesForEdit(userPrompt, manifest);
+  
+  // Get Claude Code context manager
+  const contextManager = getClaudeCodeContextManager({
+    maxContextSize: 16000,
+    messageRetentionCount: 15,
+    includeScrapeHistory: true,
+    includeEditHistory: true,
+    pruneStrategy: 'size-based'
+  });
+
+  let contextWindow: ClaudeCodeContextWindow;
+
+  if (conversationState) {
+    // Build context window with conversation history
+    contextWindow = contextManager.buildContextWindow(
+      conversationState,
+      currentFiles,
+      manifest
+    );
+    
+    // Prune if necessary
+    contextWindow = contextManager.pruneContextWindow(contextWindow);
+  } else {
+    // Create minimal context window without conversation
+    contextWindow = {
+      systemPrompt: baseContext.systemPrompt,
+      conversationHistory: [],
+      currentFiles: currentFiles || {},
+      scrapedWebsites: [],
+      editHistory: [],
+      contextMetadata: {
+        totalTokens: 0,
+        messagesCount: 0,
+        filesCount: Object.keys(currentFiles || {}).length
+      }
+    };
+  }
+
+  // Format context for Claude Code consumption
+  const formattedContext = formatContextForClaudeCode(contextWindow, true);
+
+  return {
+    ...baseContext,
+    contextWindow,
+    formattedContext
+  };
+}
+
+/**
+ * Update context with scraped website data for Claude Code
+ */
+export function updateContextWithScrapedData(
+  context: ClaudeCodeFileContext,
+  scrapedData: { url: string; content: string }
+): ClaudeCodeFileContext {
+  const contextManager = getClaudeCodeContextManager();
+  
+  // Update the context window with scraped data
+  const updatedContextWindow = contextManager.updateScrapedWebsiteContext(
+    context.contextWindow,
+    scrapedData
+  );
+
+  // Prune if necessary
+  const prunedContextWindow = contextManager.pruneContextWindow(updatedContextWindow);
+
+  // Reformat context
+  const formattedContext = formatContextForClaudeCode(prunedContextWindow, true);
+
+  return {
+    ...context,
+    contextWindow: prunedContextWindow,
+    formattedContext
+  };
+}
+
+/**
+ * Add component library reference to Claude Code context
+ */
+export function addComponentLibraryToContext(
+  context: ClaudeCodeFileContext,
+  libraryName: string,
+  components: string[]
+): ClaudeCodeFileContext {
+  const contextManager = getClaudeCodeContextManager();
+  
+  // Add component library reference
+  const updatedContextWindow = contextManager.addComponentLibraryReference(
+    context.contextWindow,
+    libraryName,
+    components
+  );
+
+  // Prune if necessary
+  const prunedContextWindow = contextManager.pruneContextWindow(updatedContextWindow);
+
+  // Reformat context
+  const formattedContext = formatContextForClaudeCode(prunedContextWindow, true);
+
+  return {
+    ...context,
+    contextWindow: prunedContextWindow,
+    formattedContext
+  };
+}
+
+/**
+ * Get context window metadata for debugging and monitoring
+ */
+export function getContextMetadata(context: ClaudeCodeFileContext): {
+  tokensUsed: number;
+  messagesCount: number;
+  filesCount: number;
+  scrapedSitesCount: number;
+  editHistoryCount: number;
+  lastPruned?: number;
+} {
+  return {
+    tokensUsed: context.contextWindow.contextMetadata.totalTokens,
+    messagesCount: context.contextWindow.contextMetadata.messagesCount,
+    filesCount: context.contextWindow.contextMetadata.filesCount,
+    scrapedSitesCount: context.contextWindow.scrapedWebsites.length,
+    editHistoryCount: context.contextWindow.editHistory.length,
+    lastPruned: context.contextWindow.contextMetadata.lastPruned
+  };
 }

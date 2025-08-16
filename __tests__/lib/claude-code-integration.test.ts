@@ -49,7 +49,9 @@ More text after the file.`;
         parts.push(part);
       }
 
-      expect(parts).toHaveLength(0);
+      // Empty string still creates one chunk in new implementation
+      expect(parts).toHaveLength(1);
+      expect(parts[0]).toBe('');
     });
 
     it('should handle response with only file blocks', async () => {
@@ -64,7 +66,9 @@ console.log('test');
         parts.push(part);
       }
 
-      expect(parts).toHaveLength(1);
+      // New implementation streams line by line, so we expect 3 chunks
+      expect(parts).toHaveLength(3);
+      expect(parts.join('')).toBe(response);
       expect(parts[0]).toContain('<file path="test.js">');
     });
   });

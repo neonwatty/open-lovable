@@ -20,7 +20,7 @@ import {
   SiCss3, 
   SiJson 
 } from '@/lib/icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import CodeApplicationProgress, { type CodeApplicationState } from '@/components/CodeApplicationProgress';
 
 interface SandboxData {
@@ -46,7 +46,6 @@ function AISandboxContent() {
   const [sandboxData, setSandboxData] = useState<SandboxData | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ text: 'Not connected', active: false });
-  const [responseArea, setResponseArea] = useState<string[]>([]);
   const [structureContent, setStructureContent] = useState('No sandbox created yet');
   const [promptInput, setPromptInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -64,9 +63,7 @@ function AISandboxContent() {
     const modelParam = searchParams.get('model');
     return appConfig.ai.availableModels.includes(modelParam || '') ? modelParam! : appConfig.ai.defaultModel;
   });
-  const [urlOverlayVisible, setUrlOverlayVisible] = useState(false);
   const [urlInput, setUrlInput] = useState('');
-  const [urlStatus, setUrlStatus] = useState<string[]>([]);
   const [showHomeScreen, setShowHomeScreen] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['app', 'src', 'src/components']));
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
@@ -76,15 +73,17 @@ function AISandboxContent() {
   const [activeTab, setActiveTab] = useState<'generation' | 'preview'>('preview');
   const [showStyleSelector, setShowStyleSelector] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
-  const [showLoadingBackground, setShowLoadingBackground] = useState(false);
   const [urlScreenshot, setUrlScreenshot] = useState<string | null>(null);
   const [isCapturingScreenshot, setIsCapturingScreenshot] = useState(false);
   const [screenshotError, setScreenshotError] = useState<string | null>(null);
   const [isPreparingDesign, setIsPreparingDesign] = useState(false);
   const [targetUrl, setTargetUrl] = useState<string>('');
   const [loadingStage, setLoadingStage] = useState<'gathering' | 'planning' | 'generating' | null>(null);
-  const [sandboxFiles, setSandboxFiles] = useState<Record<string, string>>({});
-  const [fileStructure, setFileStructure] = useState<string>('');
+  const [responseArea, setResponseArea] = useState<string[]>([]);
+  const [showLoadingBackground, setShowLoadingBackground] = useState(false);
+  const [sandboxFiles, setSandboxFiles] = useState<Record<string, any>>({});
+  const [urlStatus, setUrlStatus] = useState<string[]>([]);
+  const [urlOverlayVisible, setUrlOverlayVisible] = useState(false);
   
   const [conversationContext, setConversationContext] = useState<{
     scrapedWebsites: Array<{ url: string; content: any; timestamp: Date }>;
@@ -254,15 +253,6 @@ function AISandboxContent() {
     addChatMessage('Sandbox is ready. Vite configuration is handled by the template.', 'system');
   };
   
-  const handleSurfaceError = (errors: any[]) => {
-    // Function kept for compatibility but Vite errors are now handled by template
-    
-    // Focus the input
-    const textarea = document.querySelector('textarea') as HTMLTextAreaElement;
-    if (textarea) {
-      textarea.focus();
-    }
-  };
   
   const installPackages = async (packages: string[]) => {
     if (!sandboxData) {
@@ -896,7 +886,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
         const data = await response.json();
         if (data.success) {
           setSandboxFiles(data.files || {});
-          setFileStructure(data.structure || '');
+          setStructureContent(data.structure || '');
           console.log('[fetchSandboxFiles] Updated file list:', Object.keys(data.files || {}).length, 'files');
         }
       }

@@ -5,6 +5,8 @@
  * markdown format for consumption by Claude Code instead of traditional AI SDKs.
  */
 
+import * as claudeCodeBlockParser from './claude-code-block-parser';
+
 export interface ClaudeCodePromptContext {
   sandboxId?: string;
   currentFiles?: Record<string, string>;
@@ -21,6 +23,11 @@ export interface ClaudeCodePromptContext {
       content: string;
       timestamp: number;
     }>;
+  };
+  // New: Enhanced context from Claude Code context manager
+  claudeCodeContext?: {
+    contextWindow?: import('./claude-code-context-manager').ClaudeCodeContextWindow;
+    formattedContext?: string;
   };
 }
 
@@ -293,8 +300,11 @@ ${prompt}`;
     formattedPrompt += `\n\n## Current Project\n\n**Project:** ${context.conversationContext.currentProject}\n\n`;
   }
 
-  // Add conversation history if available
-  if (context.conversationContext?.messages?.length) {
+  // Add conversation history if available - prefer Claude Code context over legacy
+  if (context.claudeCodeContext?.formattedContext) {
+    formattedPrompt += `\n\n## Enhanced Conversation Context\n\n`;
+    formattedPrompt += context.claudeCodeContext.formattedContext;
+  } else if (context.conversationContext?.messages?.length) {
     formattedPrompt += `\n\n## Recent Conversation\n\n`;
     const recentMessages = context.conversationContext.messages.slice(-5);
     recentMessages.forEach((msg, index) => {
@@ -364,8 +374,7 @@ export function parseClaudeCodeResponseLegacy(response: string): Array<{ path: s
 export function parseClaudeCodeResponse(response: string): Array<{ path: string; content: string }> {
   // Use the enhanced parser for better extraction
   try {
-    const blockParser = require('./claude-code-block-parser');
-    const result = blockParser.parseClaudeCodeResponse(response);
+    const result = claudeCodeBlockParser.parseClaudeCodeResponse(response);
     
     // Convert to legacy format for compatibility
     return result.files.map((file: any) => ({
@@ -388,8 +397,7 @@ export function validateClaudeCodeResponse(response: string): {
 } {
   // Use the enhanced parser for validation
   try {
-    const blockParser = require('./claude-code-block-parser');
-    const result = blockParser.parseClaudeCodeResponse(response);
+    const result = claudeCodeBlockParser.parseClaudeCodeResponse(response);
     
     // The enhanced parser already provides comprehensive validation
     return {

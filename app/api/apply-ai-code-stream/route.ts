@@ -272,23 +272,40 @@ function parseAIResponse(response: string): ParsedResponse {
 
 export async function POST(request: NextRequest) {
   try {
-    const { response, isEdit = false, packages = [], sandboxId } = await request.json();
+    const requestBody = await request.json();
+    const { response, isEdit = false, packages = [], sandboxId, files } = requestBody;
     
-    if (!response) {
+    // Handle direct files format (for testing) or AI response format
+    let parsed: ParsedResponse;
+    
+    if (files && Array.isArray(files)) {
+      // Direct files format - used by tests
+      parsed = {
+        files: files,
+        packages: packages || [],
+        commands: [],
+        structure: null,
+        explanation: 'Direct file upload',
+        template: ''
+      };
+    } else if (response) {
+      // AI response format - normal operation
+      parsed = parseAIResponse(response);
+    } else {
       return NextResponse.json({
-        error: 'response is required'
+        error: 'Either response or files is required'
       }, { status: 400 });
     }
     
-    // Debug log the response
-    console.log('[apply-ai-code-stream] Received response to parse:');
-    console.log('[apply-ai-code-stream] Response length:', response.length);
-    console.log('[apply-ai-code-stream] Response preview:', response.substring(0, 500));
+    // Debug log the request
+    console.log('[apply-ai-code-stream] Received request:');
     console.log('[apply-ai-code-stream] isEdit:', isEdit);
     console.log('[apply-ai-code-stream] packages:', packages);
-    
-    // Parse the AI response
-    const parsed = parseAIResponse(response);
+    console.log('[apply-ai-code-stream] files count:', parsed.files.length);
+    if (response) {
+      console.log('[apply-ai-code-stream] Response length:', response.length);
+      console.log('[apply-ai-code-stream] Response preview:', response.substring(0, 500));
+    }
     
     // Log what was parsed
     console.log('[apply-ai-code-stream] Parsed result:');

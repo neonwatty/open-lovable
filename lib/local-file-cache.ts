@@ -332,4 +332,19 @@ export class LocalFileCacheAdapter {
       cache.manifest = manifest;
     }
   }
+
+  static async getState(): Promise<any> {
+    const state = global.localSandboxState;
+    if (!state) {
+      return null;
+    }
+    
+    return {
+      id: 'local-sandbox',
+      status: 'running',
+      url: 'http://localhost:5173',
+      files: await this.getFiles(),
+      projectRoot: state.projectRoot
+    };
+  }
 }
