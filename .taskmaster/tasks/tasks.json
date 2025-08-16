@@ -109,7 +109,7 @@
             "description": "Create file management service for writing files directly to sandbox/ directory with proper path normalization and security",
             "dependencies": [],
             "details": "Create utility functions for safe path resolution using path.join() and path.normalize(). Implement file write operations that target sandbox/ directory. Add path validation to prevent directory traversal attacks. Create helper functions for common operations like ensureDir, writeFile, and updateFile. Handle both absolute and relative paths correctly.\n<info added on 2025-08-15T14:58:05.274Z>\nBased on the user request and context, here is the comprehensive testing strategy that should be added:\n\nMock path.join() and path.normalize() with jest.mock('path') for path resolution testing. Test directory traversal attack prevention with malicious path inputs like '../../../etc/passwd', '../../sensitive/data', and absolute paths outside sandbox. Unit tests for ensureDir(), writeFile(), updateFile() helper functions using jest.fn() to verify call patterns. Integration tests with real sandbox directory operations using fs.mkdtempSync() for temporary test environments. Test absolute vs relative path handling with various path formats (./file, ../file, /absolute/path). Test file write permissions and error scenarios by mocking fs.access() and fs.chmod(). Security tests for path validation middleware using malicious payloads and boundary condition paths. Performance tests for concurrent file operations with Promise.allSettled() for multiple simultaneous writes. Test symlink resolution and prevention using fs.lstat() to detect symbolic links. Test path sanitization for special characters, Unicode, and URL-encoded paths. Mock fs.realpath() for canonical path resolution testing.\n</info added on 2025-08-15T14:58:05.274Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for file management service using Jest. Mock path.join() and path.normalize() for path resolution testing. Test directory traversal attack prevention with malicious path inputs like '../../../etc/passwd'. Unit tests for ensureDir, writeFile, updateFile helper functions. Integration tests with real sandbox directory and file operations. Test absolute vs relative path handling. Test file write permissions and error scenarios. Security tests for path validation middleware. Performance tests for concurrent file operations."
           },
           {
@@ -121,7 +121,7 @@
               "2.2"
             ],
             "details": "Install and configure chokidar for file watching. Set up watchers for sandbox/ directory with proper ignore patterns (node_modules, .git). Implement change detection logic for add, change, and unlink events. Create event emitters for file changes to trigger UI updates. Configure debouncing to prevent excessive reload triggers.\n<info added on 2025-08-15T14:58:32.041Z>\nEnhanced testing strategy implementation with Jest mocking patterns. Mock chokidar.watch() using jest.mock('chokidar') to isolate file watcher setup from real filesystem monitoring. Test event handlers by simulating file events with mockWatcher.emit('add', '/path/file.js'), mockWatcher.emit('change', '/path/file.js'), and mockWatcher.emit('unlink', '/path/file.js'). Verify ignore patterns configuration by asserting chokidar receives proper ignore globs for node_modules and .git directories. Implement debouncing tests using jest.useFakeTimers() and jest.advanceTimersByTime() to simulate rapid consecutive file changes and verify only single callback execution. Create integration tests using fs.mkdtempSync() for temporary directories and fs.writeFileSync() for real file modifications. Test event emitter UI notifications using jest.fn() mocks to verify callback invocations with correct file paths and change types. Implement error handling tests by mocking chokidar to emit 'error' events and verifying graceful failure responses. Design performance tests with multiple rapid fs.writeFileSync() calls to validate high-frequency change detection. Test watcher cleanup using mockWatcher.close() to ensure proper resource disposal. Add cross-platform path handling tests for Windows backslash vs Unix forward slash differences. Mock EventEmitter pattern for file change notifications to verify UI component callback registration and execution.\n</info added on 2025-08-15T14:58:32.041Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for chokidar integration using Jest. Mock chokidar.watch() to test file watcher setup. Test add, change, unlink event handlers with simulated file events. Test ignore patterns for node_modules/.git directories. Unit tests for debouncing logic with fake timers. Integration tests with real file changes in temp directories. Test event emitter functionality for UI updates. Test error handling for inaccessible directories. Performance tests for high-frequency file changes."
           },
           {
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-15T20:16:24.534Z",
+      "updated": "2025-08-16T03:47:44.496Z",
       "description": "Tasks for master context"
     }
   }
