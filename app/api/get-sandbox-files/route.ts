@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { parseJavaScriptFile, buildComponentTree } from '@/lib/file-parser';
 import { FileManifest, FileInfo, RouteInfo } from '@/types/file-manifest';
-import type { SandboxState } from '@/types/sandbox';
+import { 
+  initializeLocalFileCache, 
+  syncCacheWithFilesystem,
+  LocalFileCacheAdapter,
+  scanProjectFiles 
+} from '@/lib/local-file-cache';
 
 declare global {
   var activeSandbox: any;
@@ -9,67 +14,43 @@ declare global {
 
 export async function GET() {
   try {
-    if (!global.activeSandbox) {
-      return NextResponse.json({
-        success: false,
-        error: 'No active sandbox'
-      }, { status: 404 });
+    console.log('[get-sandbox-files] Fetching and analyzing local file structure...');
+    
+    // Initialize local file cache if not already done
+    if (!global.localSandboxState?.fileCache) {
+      const projectRoot = process.cwd();
+      await initializeLocalFileCache(projectRoot);
     }
-
-    console.log('[get-sandbox-files] Fetching and analyzing file structure...');
     
-    // Get all React/JS/CSS files
-    const result = await global.activeSandbox.runCode(`
-import os
-import json
-
-def get_files_content(directory='/home/user/app', extensions=['.jsx', '.js', '.tsx', '.ts', '.css', '.json']):
-    files_content = {}
+    // Sync with filesystem to get latest files
+    await syncCacheWithFilesystem();
     
-    for root, dirs, files in os.walk(directory):
-        # Skip node_modules and other unwanted directories
-        dirs[:] = [d for d in dirs if d not in ['node_modules', '.git', 'dist', 'build']]
-        
-        for file in files:
-            if any(file.endswith(ext) for ext in extensions):
-                file_path = os.path.join(root, file)
-                relative_path = os.path.relpath(file_path, '/home/user/app')
-                
-                try:
-                    with open(file_path, 'r') as f:
-                        content = f.read()
-                        # Only include files under 10KB to avoid huge responses
-                        if len(content) < 10000:
-                            files_content[relative_path] = content
-                except:
-                    pass
+    // Get all files from local filesystem
+    const projectRoot = process.cwd();
+    const localFiles = await scanProjectFiles(projectRoot, ['.jsx', '.js', '.tsx', '.ts', '.css', '.json']);
     
-    return files_content
-
-# Get the files
-files = get_files_content()
-
-# Also get the directory structure
-structure = []
-for root, dirs, files in os.walk('/home/user/app'):
-    level = root.replace('/home/user/app', '').count(os.sep)
-    indent = ' ' * 2 * level
-    structure.append(f"{indent}{os.path.basename(root)}/")
-    sub_indent = ' ' * 2 * (level + 1)
-    for file in files:
-        if not any(skip in root for skip in ['node_modules', '.git', 'dist', 'build']):
-            structure.append(f"{sub_indent}{file}")
-
-result = {
-    'files': files,
-    'structure': '\\n'.join(structure[:50])  # Limit structure to 50 lines
-}
-
-print(json.dumps(result))
-    `);
-
-    const output = result.logs.stdout.join('');
-    const parsedResult = JSON.parse(output);
+    // Convert to the expected format
+    const files: Record<string, string> = {};
+    for (const [relativePath, file] of Object.entries(localFiles)) {
+      // Only include files under 10KB to avoid huge responses
+      if (file.content.length < 10000) {
+        files[relativePath] = file.content;
+      }
+    }
+    
+    // Build directory structure string
+    const structure = Object.keys(localFiles)
+      .sort()
+      .slice(0, 50) // Limit to 50 files
+      .map(path => {
+        const depth = path.split('/').length - 1;
+        const indent = '  '.repeat(depth);
+        const fileName = path.split('/').pop();
+        return `${indent}${fileName}`;
+      })
+      .join('\n');
+    
+    const parsedResult = { files, structure };
     
     // Build enhanced file manifest
     const fileManifest: FileManifest = {
@@ -83,7 +64,8 @@ print(json.dumps(result))
     
     // Process each file
     for (const [relativePath, content] of Object.entries(parsedResult.files)) {
-      const fullPath = `/home/user/app/${relativePath}`;
+      const fullPath = `${projectRoot}/${relativePath}`;
+      const stats = localFiles[relativePath];
       
       // Create base file info
       const fileInfo: FileInfo = {
@@ -91,7 +73,7 @@ print(json.dumps(result))
         type: 'utility',
         path: fullPath,
         relativePath,
-        lastModified: Date.now(),
+        lastModified: stats?.lastModified || Date.now(),
       };
       
       // Parse JavaScript/JSX files
@@ -125,10 +107,8 @@ print(json.dumps(result))
     // Extract routes (simplified - looks for Route components or page pattern)
     fileManifest.routes = extractRoutes(fileManifest.files);
     
-    // Update global file cache with manifest
-    if (global.sandboxState?.fileCache) {
-      global.sandboxState.fileCache.manifest = fileManifest;
-    }
+    // Update local file cache with manifest
+    await LocalFileCacheAdapter.setManifest(fileManifest);
 
     return NextResponse.json({
       success: true,

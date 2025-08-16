@@ -9,6 +9,11 @@ import { executeSearchPlan, formatSearchResultsForAI, selectTargetFile } from '@
 import { FileManifest } from '@/types/file-manifest';
 import type { ConversationState, ConversationMessage, ConversationEdit } from '@/types/conversation';
 import { appConfig } from '@/config/app.config';
+import { 
+  initializeLocalFileCache, 
+  syncCacheWithFilesystem,
+  LocalFileCacheAdapter
+} from '@/lib/local-file-cache';
 
 const groq = createGroq({
   apiKey: process.env.GROQ_API_KEY,
@@ -156,16 +161,29 @@ export async function POST(request: NextRequest) {
         let enhancedSystemPrompt = '';
         
         if (isEdit) {
-          console.log('[generate-ai-code-stream] Edit mode detected - starting agentic search workflow');
-          console.log('[generate-ai-code-stream] Has fileCache:', !!global.sandboxState?.fileCache);
-          console.log('[generate-ai-code-stream] Has manifest:', !!global.sandboxState?.fileCache?.manifest);
+          console.log('[generate-ai-code-stream] Edit mode detected - starting local filesystem workflow');
           
-          const manifest: FileManifest | undefined = global.sandboxState?.fileCache?.manifest;
+          // Initialize local file cache if not already done
+          if (!global.localSandboxState?.fileCache) {
+            const projectRoot = process.cwd();
+            await initializeLocalFileCache(projectRoot);
+            await syncCacheWithFilesystem();
+            console.log('[generate-ai-code-stream] Initialized local file cache');
+          } else {
+            // Sync with filesystem to catch any changes
+            await syncCacheWithFilesystem();
+            console.log('[generate-ai-code-stream] Synced local file cache');
+          }
+          
+          console.log('[generate-ai-code-stream] Has local fileCache:', !!global.localSandboxState?.fileCache);
+          console.log('[generate-ai-code-stream] Has manifest:', !!global.localSandboxState?.fileCache?.manifest);
+          
+          const manifest: FileManifest | undefined = await LocalFileCacheAdapter.getManifest();
           
           if (manifest) {
             await sendProgress({ type: 'status', message: '🔍 Creating search plan...' });
             
-            const fileContents = global.sandboxState.fileCache?.files || {};
+            const fileContents = await LocalFileCacheAdapter.getFiles();
             console.log('[generate-ai-code-stream] Files available for search:', Object.keys(fileContents).length);
             
             // STEP 1: Get search plan from AI
@@ -905,98 +923,61 @@ CRITICAL: When files are provided in the context:
             contextParts.push(`Current file structure:\n${context.structure}`);
           }
           
-          // Use backend file cache instead of frontend-provided files
-          let backendFiles = global.sandboxState?.fileCache?.files || {};
+          // Use local file cache instead of frontend-provided files
+          let backendFiles = await LocalFileCacheAdapter.getFiles();
           let hasBackendFiles = Object.keys(backendFiles).length > 0;
           
-          console.log('[generate-ai-code-stream] Backend file cache status:');
-          console.log('[generate-ai-code-stream] - Has sandboxState:', !!global.sandboxState);
-          console.log('[generate-ai-code-stream] - Has fileCache:', !!global.sandboxState?.fileCache);
+          console.log('[generate-ai-code-stream] Local file cache status:');
+          console.log('[generate-ai-code-stream] - Has localSandboxState:', !!global.localSandboxState);
+          console.log('[generate-ai-code-stream] - Has fileCache:', !!global.localSandboxState?.fileCache);
           console.log('[generate-ai-code-stream] - File count:', Object.keys(backendFiles).length);
-          console.log('[generate-ai-code-stream] - Has manifest:', !!global.sandboxState?.fileCache?.manifest);
+          console.log('[generate-ai-code-stream] - Has manifest:', !!global.localSandboxState?.fileCache?.manifest);
           
-          // If no backend files and we're in edit mode, try to fetch from sandbox
-          if (!hasBackendFiles && isEdit && (global.activeSandbox || context?.sandboxId)) {
-            console.log('[generate-ai-code-stream] No backend files, attempting to fetch from sandbox...');
+          // If no backend files and we're in edit mode, try to sync local filesystem
+          if (!hasBackendFiles && isEdit) {
+            console.log('[generate-ai-code-stream] No cached files, syncing from local filesystem...');
             
             try {
-              const filesResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/get-sandbox-files`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' }
-              });
+              // Force a full sync from local filesystem
+              await syncCacheWithFilesystem();
               
-              if (filesResponse.ok) {
-                const filesData = await filesResponse.json();
-                if (filesData.success && filesData.files) {
-                  console.log('[generate-ai-code-stream] Successfully fetched', Object.keys(filesData.files).length, 'files from sandbox');
+              // Get the updated files from local cache
+              backendFiles = await LocalFileCacheAdapter.getFiles();
+              hasBackendFiles = Object.keys(backendFiles).length > 0;
+              
+              console.log('[generate-ai-code-stream] Successfully synced', Object.keys(backendFiles).length, 'files from local filesystem');
+              
+              // Get manifest if available
+              const localManifest = await LocalFileCacheAdapter.getManifest();
+              
+              if (localManifest && !editContext) {
+                console.log('[generate-ai-code-stream] Analyzing edit intent with local manifest');
+                try {
+                  const intentResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analyze-edit-intent`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt, manifest: localManifest, model })
+                  });
                   
-                  // Initialize sandboxState if needed
-                  if (!global.sandboxState) {
-                    global.sandboxState = {
-                      fileCache: {
-                        files: {},
-                        lastSync: Date.now(),
-                        sandboxId: context?.sandboxId || 'unknown'
-                      }
-                    } as any;
-                  } else if (!global.sandboxState.fileCache) {
-                    global.sandboxState.fileCache = {
-                      files: {},
-                      lastSync: Date.now(),
-                      sandboxId: context?.sandboxId || 'unknown'
-                    };
-                  }
-                  
-                  // Store files in cache
-                  for (const [path, content] of Object.entries(filesData.files)) {
-                    const normalizedPath = path.replace('/home/user/app/', '');
-                    if (global.sandboxState.fileCache) {
-                      global.sandboxState.fileCache.files[normalizedPath] = {
-                        content: content as string,
-                        lastModified: Date.now()
-                      };
-                    }
-                  }
-                  
-                  if (filesData.manifest && global.sandboxState.fileCache) {
-                    global.sandboxState.fileCache.manifest = filesData.manifest;
+                  if (intentResponse.ok) {
+                    const { searchPlan } = await intentResponse.json();
+                    console.log('[generate-ai-code-stream] Search plan received:', searchPlan);
                     
-                    // Now try to analyze edit intent with the fetched manifest
-                    if (!editContext) {
-                      console.log('[generate-ai-code-stream] Analyzing edit intent with fetched manifest');
-                      try {
-                        const intentResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/analyze-edit-intent`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({ prompt, manifest: filesData.manifest, model })
-                        });
-                        
-                        if (intentResponse.ok) {
-                          const { searchPlan } = await intentResponse.json();
-                          console.log('[generate-ai-code-stream] Search plan received:', searchPlan);
-                          
-                          // Create edit context from AI analysis
-                          // Note: We can't execute search here without file contents, so fall back to keyword method
-                          const fileContext = selectFilesForEdit(prompt, filesData.manifest);
-                          editContext = fileContext;
-                          enhancedSystemPrompt = fileContext.systemPrompt;
-                          
-                          console.log('[generate-ai-code-stream] Edit context created with', editContext.primaryFiles.length, 'primary files');
-                        }
-                      } catch (error) {
-                        console.error('[generate-ai-code-stream] Failed to analyze edit intent:', error);
-                      }
-                    }
+                    // Create edit context from AI analysis
+                    const fileContext = selectFilesForEdit(prompt, localManifest);
+                    editContext = fileContext;
+                    enhancedSystemPrompt = fileContext.systemPrompt;
+                    
+                    console.log('[generate-ai-code-stream] Edit context created with', editContext.primaryFiles.length, 'primary files');
                   }
-                  
-                  // Update variables
-                  backendFiles = global.sandboxState.fileCache?.files || {};
-                  hasBackendFiles = Object.keys(backendFiles).length > 0;
-                  console.log('[generate-ai-code-stream] Updated backend cache with fetched files');
+                } catch (error) {
+                  console.error('[generate-ai-code-stream] Failed to analyze edit intent:', error);
                 }
               }
+              
+              console.log('[generate-ai-code-stream] Updated local cache with synced files');
             } catch (error) {
-              console.error('[generate-ai-code-stream] Failed to fetch sandbox files:', error);
+              console.error('[generate-ai-code-stream] Failed to sync local filesystem:', error);
             }
           }
           
@@ -1007,9 +988,11 @@ CRITICAL: When files are provided in the context:
               contextParts.push('\nEXISTING APPLICATION - TARGETED EDIT MODE');
               contextParts.push(`\n${editContext.systemPrompt || enhancedSystemPrompt}\n`);
               
-              // Get contents of primary and context files
-              const primaryFileContents = await getFileContents(editContext.primaryFiles, global.sandboxState!.fileCache!.manifest!);
-              const contextFileContents = await getFileContents(editContext.contextFiles, global.sandboxState!.fileCache!.manifest!);
+              // Get contents of primary and context files from local cache
+              const manifest = await LocalFileCacheAdapter.getManifest();
+              const localFiles = await LocalFileCacheAdapter.getFiles();
+              const primaryFileContents = await getFileContents(editContext.primaryFiles, manifest!, localFiles);
+              const contextFileContents = await getFileContents(editContext.contextFiles, manifest!, localFiles);
               
               // Format files for AI
               const formattedFiles = formatFilesForAI(primaryFileContents, contextFileContents);

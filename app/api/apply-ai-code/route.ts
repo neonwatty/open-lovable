@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
+import { updateCacheFile } from '@/lib/local-file-cache';
 
 declare global {
   var conversationState: ConversationState | null;
@@ -343,13 +344,12 @@ export async function POST(request: NextRequest) {
           await global.activeSandbox.files.write(fullPath, fileContent);
           console.log(`[apply-ai-code] Successfully wrote file: ${fullPath}`);
           
-          // Update file cache
-          if (global.sandboxState?.fileCache) {
-            global.sandboxState.fileCache.files[normalizedPath] = {
-              content: fileContent,
-              lastModified: Date.now()
-            };
-            console.log(`[apply-ai-code] Updated file cache for: ${normalizedPath}`);
+          // Update local file cache
+          try {
+            await updateCacheFile(normalizedPath, fileContent);
+            console.log(`[apply-ai-code] Updated local file cache for: ${normalizedPath}`);
+          } catch (error) {
+            console.error(`[apply-ai-code] Failed to update local cache for ${normalizedPath}:`, error);
           }
           
         } catch (writeError) {

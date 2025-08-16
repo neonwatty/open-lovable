@@ -4,6 +4,7 @@ import { mkdir, writeFile } from 'fs/promises';
 import { dirname } from 'path';
 import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
+import { updateCacheFile } from '@/lib/local-file-cache';
 
 declare global {
   var conversationState: ConversationState | null;
@@ -549,12 +550,12 @@ export async function POST(request: NextRequest) {
               throw new Error(`Failed to write file ${fullPath}: ${(fsError as Error).message}`);
             }
             
-            // Update file cache
-            if (global.sandboxState?.fileCache) {
-              global.sandboxState.fileCache.files[normalizedPath] = {
-                content: fileContent,
-                lastModified: Date.now()
-              };
+            // Update local file cache
+            try {
+              await updateCacheFile(normalizedPath, fileContent);
+              console.log(`[apply-ai-code-stream] Updated local file cache for: ${normalizedPath}`);
+            } catch (error) {
+              console.error(`[apply-ai-code-stream] Failed to update local cache for ${normalizedPath}:`, error);
             }
             
             if (isUpdate) {
