@@ -5,20 +5,42 @@
 import { NextRequest } from 'next/server';
 
 // Mock Next.js server components before importing
-jest.mock('next/server', () => ({
-  NextRequest: jest.fn().mockImplementation((url, init) => ({
-    url,
-    method: init?.method || 'GET',
-    headers: new Map(Object.entries(init?.headers || {})),
-    json: jest.fn().mockResolvedValue(JSON.parse(init?.body || '{}')),
-  })),
-  NextResponse: {
-    json: jest.fn((data, init) => ({
+jest.mock('next/server', () => {
+  class MockNextRequest {
+    url: string;
+    method: string;
+    headers: Map<string, string>;
+    body: string;
+    
+    constructor(url: string, init?: any) {
+      this.url = url;
+      this.method = init?.method || 'GET';
+      this.headers = new Map(Object.entries(init?.headers || {}));
+      this.body = init?.body || '';
+    }
+    
+    async json() {
+      return JSON.parse(this.body || '{}');
+    }
+    
+    async text() {
+      return this.body;
+    }
+  }
+  
+  const MockNextResponse = {
+    json: jest.fn((data: any, init?: any) => ({
       json: () => Promise.resolve(data),
       status: init?.status || 200,
+      headers: new Map(),
     })),
-  },
-}));
+  };
+  
+  return {
+    NextRequest: MockNextRequest,
+    NextResponse: MockNextResponse,
+  };
+});
 
 import { POST } from '@/app/api/generate-ai-code-stream/route';
 import type { SandboxState } from '@/types/sandbox';
@@ -389,25 +411,32 @@ describe.skip('/api/generate-ai-code-stream', () => {
   describe('Conversation State Integration', () => {
     it('should handle conversation state with previous messages', async () => {
       const conversationState: ConversationState = {
-        messages: [
-          {
-            id: '1',
-            role: 'user',
-            content: 'Create a todo app',
-            timestamp: new Date().toISOString(),
-          },
-          {
-            id: '2',
-            role: 'assistant',
-            content: 'I created a todo app with add/remove functionality.',
-            timestamp: new Date().toISOString(),
-          },
-        ],
+        conversationId: 'test-conversation',
+        startedAt: Date.now(),
+        lastUpdated: Date.now(),
         context: {
+          messages: [
+            {
+              id: '1',
+              role: 'user',
+              content: 'Create a todo app',
+              timestamp: Date.now(),
+            },
+            {
+              id: '2',
+              role: 'assistant',
+              content: 'I created a todo app with add/remove functionality.',
+              timestamp: Date.now(),
+            },
+          ],
+          edits: [],
           scrapedWebsites: [],
           generatedComponents: ['TodoApp'],
-        },
-        edits: [],
+          projectEvolution: {
+            majorChanges: []
+          },
+          userPreferences: {}
+        }
       };
 
       (global as any).sandboxState = {

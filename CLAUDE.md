@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Open Lovable is a Next.js-based application that allows users to chat with AI to build React apps instantly. It integrates E2B sandboxes for code execution, Firecrawl for web scraping, and supports multiple AI providers (OpenAI GPT-5, Anthropic Claude, Groq with Kimi K2).
+Open Lovable is a Next.js-based application that allows users to chat with AI to build React apps instantly. It integrates E2B sandboxes for code execution, built-in web scraping using Puppeteer and Cheerio, and supports multiple AI providers (OpenAI GPT-5, Anthropic Claude, Groq with Kimi K2).
 
 ## Development Commands
 
@@ -36,7 +36,7 @@ npm run test:code        # Code execution tests
 - **Frontend**: Next.js 15.4 with React 19, TypeScript, Tailwind CSS
 - **AI Integration**: Vercel AI SDK with support for Anthropic, OpenAI, and Groq
 - **Sandbox Environment**: E2B for isolated code execution
-- **Web Scraping**: Firecrawl API
+- **Web Scraping**: Built-in scraping with Puppeteer, Cheerio, and Turndown
 - **Styling**: Tailwind CSS with Radix UI components
 
 ### Key Directories
@@ -52,7 +52,7 @@ npm run test:code        # Code execution tests
 - `generate-ai-code-stream` - Streams AI-generated code with context
 - `apply-ai-code-stream` - Applies generated code to sandbox files
 - `detect-and-install-packages` - Auto-detects and installs missing npm packages
-- `scrape-url-enhanced` - Scrapes websites for context using Firecrawl
+- `scrape-url-enhanced` - Scrapes websites for context using built-in scraping tools
 
 ### Key Features
 - **Context-Aware Code Generation**: Maintains conversation context including scraped websites and generated components
@@ -72,7 +72,6 @@ npm run test:code        # Code execution tests
 
 Required in `.env.local`:
 - `E2B_API_KEY` - E2B sandbox API key
-- `FIRECRAWL_API_KEY` - Firecrawl web scraping API key
 - At least one AI provider key:
   - `ANTHROPIC_API_KEY`
   - `OPENAI_API_KEY`

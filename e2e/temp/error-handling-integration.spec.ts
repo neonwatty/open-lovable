@@ -152,7 +152,7 @@ test.describe('Error Handling Integration E2E Tests', () => {
         await chatInput.press('Enter');
         
         // Should show appropriate error message for category
-        await expect(page.locator(scenario.expectedText)).toBeVisible({ timeout: 15000 });
+        await expect(page.locator(`text=${scenario.expectedText}`)).toBeVisible({ timeout: 15000 });
         
         // Should show severity level appropriately
         if (scenario.severity === 'high') {
@@ -219,7 +219,7 @@ test.describe('Error Handling Integration E2E Tests', () => {
     // Mock recoverable error
     await page.route('/api/apply-ai-code-stream', async route => {
       const request = route.request();
-      const body = JSON.parse(await request.text());
+      const body = JSON.parse(request.postData() || '{}');
       
       // Simulate retry scenario
       if (body.retry === true) {

@@ -228,18 +228,18 @@ describe('withErrorHandling', () => {
   });
 
   it('should execute successful operations without interference', async () => {
-    const operation = jest.fn().mockResolvedValue('success');
+    const operation = (jest.fn() as any).mockResolvedValue('success');
     
-    const result = await withErrorHandling(operation, 'test-operation');
+    const result = await withErrorHandling(operation as () => Promise<string>, 'test-operation');
     
     expect(result).toBe('success');
     expect(operation).toHaveBeenCalledTimes(1);
   });
 
   it('should wrap errors in SystemError', async () => {
-    const operation = jest.fn().mockRejectedValue(new Error('Operation failed'));
+    const operation = (jest.fn() as any).mockRejectedValue(new Error('Operation failed'));
     
-    await expect(withErrorHandling(operation, 'test-operation', '/test/file.txt')).rejects.toThrow(SystemError);
+    await expect(withErrorHandling(operation as () => Promise<unknown>, 'test-operation', '/test/file.txt')).rejects.toThrow(SystemError);
     
     const recentErrors = ErrorHandler.getRecentErrors();
     expect(recentErrors).toHaveLength(1);

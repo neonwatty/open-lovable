@@ -27,6 +27,8 @@ export interface ConversationContext {
   messages: ConversationMessage[];
   edits: ConversationEdit[];
   currentTopic?: string; // Current focus area (e.g., "header styling", "hero section")
+  scrapedWebsites?: any[]; // Scraped website data for context
+  generatedComponents?: string[]; // Components generated in this conversation
   projectEvolution: {
     initialState?: string; // Description of initial project state
     majorChanges: Array<{

@@ -20,7 +20,7 @@ test.describe('Transactional File Operations E2E Tests', () => {
     // Mock E2B sandbox environment
     await page.route('/api/apply-ai-code-stream', async route => {
       const request = route.request();
-      const body = JSON.parse(await request.text());
+      const body = JSON.parse(request.postData() || '{}');
       
       // Simulate partial failure scenario that triggers rollback
       if (body.files && body.files.length > 1) {

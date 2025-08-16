@@ -505,18 +505,18 @@ describe('CleanupService', () => {
     it('should detect memory leaks and trigger garbage collection', async () => {
       // Mock high memory usage
       const originalMemoryUsage = process.memoryUsage;
-      process.memoryUsage = jest.fn(() => ({
+      process.memoryUsage = jest.fn().mockReturnValue({
         heapUsed: 200 * 1024 * 1024, // 200MB - above threshold
         heapTotal: 300 * 1024 * 1024,
         external: 10 * 1024 * 1024,
         rss: 250 * 1024 * 1024,
         arrayBuffers: 5 * 1024 * 1024
-      }));
+      }) as unknown as jest.MockedFunction<typeof process.memoryUsage>;
 
       // Mock gc function to simulate memory freed
       mockGc.mockImplementation(() => {
         // Simulate memory being freed after GC
-        (process.memoryUsage as jest.Mock).mockImplementation(() => ({
+        (process.memoryUsage as jest.MockedFunction<typeof process.memoryUsage>).mockImplementation(() => ({
           heapUsed: 50 * 1024 * 1024, // 50MB - after GC
           heapTotal: 100 * 1024 * 1024,
           external: 5 * 1024 * 1024,
@@ -549,7 +549,7 @@ describe('CleanupService', () => {
       const originalMemoryUsage = process.memoryUsage;
       let callCount = 0;
       
-      process.memoryUsage = jest.fn(() => {
+      process.memoryUsage = jest.fn().mockImplementation(() => {
         callCount++;
         return {
           heapUsed: callCount === 1 ? 150 * 1024 * 1024 : 50 * 1024 * 1024,
@@ -558,7 +558,7 @@ describe('CleanupService', () => {
           rss: 180 * 1024 * 1024,
           arrayBuffers: 5 * 1024 * 1024
         };
-      });
+      }) as unknown as jest.MockedFunction<typeof process.memoryUsage>;
 
       mockProcessManager.cleanupZombieProcesses.mockResolvedValue(0);
       mockSandboxManager.listSandboxes.mockResolvedValue([]);
@@ -629,9 +629,9 @@ describe('CleanupService', () => {
 
     it('should handle graceful shutdown on SIGINT and SIGTERM', () => {
       const mockProcessOn = process.on as jest.MockedFunction<typeof process.on>;
-      const signalHandlers: { [key: string]: (...args: any[]) => void } = {};
+      const signalHandlers: { [key: string | symbol]: (...args: any[]) => void } = {};
 
-      mockProcessOn.mockImplementation((signal: string, handler: (...args: any[]) => void) => {
+      mockProcessOn.mockImplementation((signal: string | symbol, handler: (...args: any[]) => void) => {
         signalHandlers[signal] = handler;
         return process;
       });

@@ -159,7 +159,7 @@
         "testStrategy": "Test scraping of static websites with fetch + cheerio. Verify Puppeteer handles JavaScript-heavy sites correctly. Confirm content sanitization prevents quote/encoding issues. Test screenshot functionality works.",
         "priority": "medium",
         "dependencies": [],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -167,7 +167,7 @@
             "description": "Replace Firecrawl API calls with native Node.js fetch() for basic HTML retrieval",
             "dependencies": [],
             "details": "Update /app/api/scrape-url-enhanced/route.ts to use built-in fetch() API for retrieving HTML content. Implement proper error handling for network failures, timeouts, and invalid URLs. Add support for custom headers and user agents. Handle redirects and different response status codes appropriately. Extract and preserve the original URL structure for relative link resolution.\n<info added on 2025-08-15T14:59:45.505Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for fetch API usage using Jest. Mock global fetch with jest.fn() using jest.mock('node-fetch') or global.fetch mocking to test HTTP requests without real network calls. Test error handling for network failures by mocking fetch to reject with various error types (TypeError for network errors, specific status codes for HTTP errors). Test timeout scenarios using fetch AbortController and jest.useFakeTimers(). Test invalid URL handling with malformed URL inputs and verify proper error responses. Test custom headers and user agent configuration by verifying fetch is called with correct headers object. Test redirect handling by mocking fetch responses with redirect status codes (301, 302, 307, 308). Test different response status codes (200, 404, 500, 403) and verify appropriate error handling. Integration tests using real fetch calls to public test APIs with proper timeout and error boundaries. Test response parsing for different content types (HTML, JSON, XML). Test large response handling and memory management. Test concurrent fetch operations using Promise.all with multiple simultaneous requests."
           },
           {
@@ -178,7 +178,7 @@
               "3.1"
             ],
             "details": "Install and configure cheerio for server-side DOM manipulation. Implement HTML to markdown conversion logic matching existing Firecrawl output format. Extract main content, remove navigation/ads/footers using content detection heuristics. Preserve important metadata like title, description, and Open Graph tags. Handle special HTML entities and ensure proper text encoding.\n<info added on 2025-08-15T15:00:10.429Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for Cheerio HTML parsing using Jest. Mock cheerio.load() and test DOM manipulation without real HTML processing using jest.mock('cheerio'). Test HTML to markdown conversion logic by providing sample HTML inputs and verifying expected markdown outputs using expect().toBe() assertions. Test main content extraction using Cheerio selectors for common content patterns (article, main, .content, #content) and verify navigation/ads/footers are properly removed. Test metadata extraction (title, description, Open Graph tags) using Cheerio's attr() and text() methods with mock HTML containing meta tags. Test HTML entity handling (&#8217;, &amp;, &lt;) and proper UTF-8 text encoding using various encoded HTML inputs. Integration tests with real HTML documents using cheerio.load() on test HTML files. Test edge cases like malformed HTML, empty documents, and documents with only scripts/styles. Test content detection heuristics for article extraction using readability algorithms. Performance tests with large HTML documents measuring parsing and extraction speed. Test cross-platform text encoding compatibility."
           },
           {
@@ -190,7 +190,7 @@
               "3.2"
             ],
             "details": "Install and configure Puppeteer with headless Chrome for JavaScript execution. Implement fallback logic to use Puppeteer when fetch() returns minimal content. Add wait strategies for dynamic content loading (waitForSelector, network idle). Implement screenshot capture functionality with configurable viewport sizes. Handle Puppeteer lifecycle management and resource cleanup. Add timeout controls and memory optimization for long-running scrapes.\n<info added on 2025-08-15T15:00:38.312Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for Puppeteer integration using Jest. Mock puppeteer.launch() and browser methods with jest.mock('puppeteer') to test browser automation without launching real Chrome instances. Test fallback logic by mocking fetch responses with minimal content and verifying Puppeteer activation. Test wait strategies (waitForSelector, networkIdle) using puppeteer page mocks and jest.useFakeTimers() for timeout scenarios. Test screenshot capture functionality by mocking page.screenshot() and verifying correct viewport configurations. Test Puppeteer lifecycle management (browser.close(), page.close()) using jest.fn() to ensure proper resource cleanup. Test timeout controls and memory optimization using browser.newPage() mocks and memory usage monitoring. Integration tests using real headless Chrome for end-to-end validation with actual websites. Test cross-browser compatibility (Chrome, Firefox) if supported. Test concurrent page handling with multiple tabs using browser.newPage(). Performance tests measuring page load times and memory consumption. Test error handling for browser launch failures and unresponsive pages. Mock browser events and page navigation for comprehensive coverage."
           },
           {
@@ -202,7 +202,7 @@
               "3.3"
             ],
             "details": "Implement smart quote conversion and proper Unicode handling for scraped content. Add XSS prevention through HTML sanitization while preserving necessary formatting. Handle edge cases like curly quotes, em-dashes, and other typographic characters. Ensure proper UTF-8 encoding throughout the pipeline. Remove FIRECRAWL_API_KEY from environment variables and update documentation. Add comprehensive error responses matching existing API contract.\n<info added on 2025-08-15T15:01:02.044Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests for content sanitization using Jest covering XSS prevention scenarios with malicious HTML inputs including <script> tags, <iframe> elements, and javascript: protocols to verify proper sanitization while preserving necessary formatting. Test smart quote conversion functionality using test strings containing curly quotes (\" \" ' '), em-dashes (—), en-dashes (–), ellipses (…), and other Unicode typographic characters to ensure conversion to straight quotes and ASCII equivalents. Create comprehensive test cases for edge cases including mixed encoding scenarios, malformed HTML, and various Unicode normalization forms. Add integration tests to verify the complete scraping pipeline handles content sanitization correctly from raw HTML input through final output."
           }
         ]
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-16T04:34:10.580Z",
+      "updated": "2025-08-16T05:15:02.203Z",
       "description": "Tasks for master context"
     }
   }

@@ -1,8 +1,40 @@
 // Mock Next.js server modules before imports
-jest.mock('next/server', () => ({
-  NextRequest: jest.fn(),
-  NextResponse: jest.fn(),
-}));
+jest.mock('next/server', () => {
+  class MockNextRequest {
+    url: string;
+    method: string;
+    headers: Map<string, string>;
+    body: string;
+    
+    constructor(url: string, init?: any) {
+      this.url = url;
+      this.method = init?.method || 'POST';
+      this.headers = new Map(Object.entries(init?.headers || {}));
+      this.body = init?.body || '';
+    }
+    
+    async json() {
+      return JSON.parse(this.body || '{}');
+    }
+    
+    async text() {
+      return this.body;
+    }
+  }
+  
+  const MockNextResponse = {
+    json: jest.fn((data: any, init?: any) => ({
+      json: () => Promise.resolve(data),
+      status: init?.status || 200,
+      headers: new Map(),
+    })),
+  };
+  
+  return {
+    NextRequest: MockNextRequest,
+    NextResponse: MockNextResponse,
+  };
+});
 
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/generate-ai-code-stream/route';

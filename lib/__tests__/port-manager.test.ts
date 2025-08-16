@@ -72,10 +72,10 @@ describe('PortManager', () => {
     it('should check availability of unreserved port', async () => {
       // Mock successful port binding
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.on.mockImplementation(() => {}); // No error event
 
@@ -88,10 +88,10 @@ describe('PortManager', () => {
     beforeEach(() => {
       // Mock successful port binding for all tests
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -156,10 +156,10 @@ describe('PortManager', () => {
     beforeEach(() => {
       // Mock successful port binding
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -208,10 +208,10 @@ describe('PortManager', () => {
   describe('port release', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -238,10 +238,10 @@ describe('PortManager', () => {
   describe('port activation', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -272,10 +272,10 @@ describe('PortManager', () => {
   describe('port conflict handling', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -330,10 +330,10 @@ describe('PortManager', () => {
   describe('statistics', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -358,10 +358,10 @@ describe('PortManager', () => {
   describe('reservation retrieval', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -390,10 +390,10 @@ describe('PortManager', () => {
   describe('cleanup operations', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -417,10 +417,10 @@ describe('PortManager', () => {
   describe('edge cases and error handling', () => {
     it('should handle rapid allocation and deallocation', async () => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 1);
+        setTimeout(callback as () => void, 1);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 1);
+        setTimeout(callback as () => void, 1);
       });
 
       // Rapid allocation/deallocation cycles
@@ -444,10 +444,10 @@ describe('PortManager', () => {
       });
 
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
 
       // Reserve all ports
@@ -465,10 +465,10 @@ describe('PortManager', () => {
   describe('event emitter behavior', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, 10);
+        setTimeout(callback as () => void, 10);
       });
     });
 
@@ -504,10 +504,10 @@ describe('PortManager', () => {
   describe('stress testing', () => {
     beforeEach(() => {
       mockServer.listen.mockImplementation((port, callback) => {
-        setTimeout(callback, Math.random() * 10);
+        setTimeout(callback as () => void, Math.random() * 10);
       });
       mockServer.close.mockImplementation((callback) => {
-        setTimeout(callback, Math.random() * 10);
+        setTimeout(callback as () => void, Math.random() * 10);
       });
     });
 

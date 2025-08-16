@@ -230,7 +230,7 @@ describe.skip('Home Page', () => {
         const submitButton = buttons.find(button => 
           button.textContent?.includes('Send') || 
           button.textContent?.includes('Generate') ||
-          button.type === 'submit'
+          (button as HTMLButtonElement).type === 'submit'
         );
         
         if (submitButton) {
