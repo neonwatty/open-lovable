@@ -234,8 +234,8 @@ describe('FileWatcher Integration Tests', () => {
 
       await Promise.all(filePromises);
 
-      // Wait for events to be processed
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Wait for events to be processed (longer than debounce time of 300ms)
+      await new Promise(resolve => setTimeout(resolve, 400));
 
       expect(events.length).toBe(5);
       // Check that all expected files are present (order may vary due to async nature)

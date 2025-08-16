@@ -154,20 +154,26 @@ export class ClaudeCodeContextManager {
       content: scrapedData.content
     };
 
-    // Add new scraped data
-    contextWindow.scrapedWebsites.push(newScrapedSite);
+    // Create a new context window to avoid mutation
+    const updatedContextWindow = {
+      ...contextWindow,
+      scrapedWebsites: [...contextWindow.scrapedWebsites, newScrapedSite]
+    };
 
     // Prune old scraped data if needed
-    if (contextWindow.scrapedWebsites.length > 5) {
-      contextWindow.scrapedWebsites = contextWindow.scrapedWebsites
+    if (updatedContextWindow.scrapedWebsites.length > 5) {
+      updatedContextWindow.scrapedWebsites = updatedContextWindow.scrapedWebsites
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 5);
     }
 
     // Update token estimate
-    contextWindow.contextMetadata.totalTokens = this.estimateTokens(contextWindow);
+    updatedContextWindow.contextMetadata = {
+      ...updatedContextWindow.contextMetadata,
+      totalTokens: this.estimateTokens(updatedContextWindow)
+    };
 
-    return contextWindow;
+    return updatedContextWindow;
   }
 
   /**

@@ -192,7 +192,7 @@ describe('ClaudeCodeContextManager', () => {
           }
         );
         // Small delay to ensure different timestamps
-        await new Promise(resolve => setTimeout(resolve, 1));
+        await new Promise(resolve => setTimeout(resolve, 10));
       }
 
       expect(contextWindow.scrapedWebsites).toHaveLength(5);
