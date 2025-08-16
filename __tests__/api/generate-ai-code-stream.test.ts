@@ -2,6 +2,8 @@
  * @jest-environment node
  */
 
+import { NextRequest } from 'next/server';
+
 // Mock Next.js server components before importing
 jest.mock('next/server', () => ({
   NextRequest: jest.fn().mockImplementation((url, init) => ({

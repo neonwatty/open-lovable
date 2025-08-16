@@ -1,10 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Sandbox } from '@e2b/code-interpreter';
-import { mkdir, writeFile } from 'fs/promises';
 import { dirname } from 'path';
 import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
 import { updateCacheFile } from '@/lib/local-file-cache';
+import { 
+  TransactionalFileOperations
+} from '@/lib/transactional-file-operations';
+import { 
+  ErrorHandler, 
+  withErrorHandling, 
+  FileOperationRecovery,
+  ErrorSeverity 
+} from '@/lib/error-handling';
 
 declare global {
   var conversationState: ConversationState | null;
@@ -489,7 +497,7 @@ export async function POST(request: NextRequest) {
           });
         }
         
-        // Step 2: Create/update files
+        // Step 2: Create/update files with transactional rollback support
         const filesArray = Array.isArray(parsed.files) ? parsed.files : [];
         await sendProgress({ 
           type: 'step', 
@@ -505,80 +513,203 @@ export async function POST(request: NextRequest) {
           return !configFiles.includes(fileName);
         });
         
-        for (const [index, file] of filteredFiles.entries()) {
-          try {
-            // Send progress for each file
-            await sendProgress({
-              type: 'file-progress',
-              current: index + 1,
-              total: filteredFiles.length,
-              fileName: file.path,
-              action: 'creating'
-            });
-            
-            // Normalize the file path
-            let normalizedPath = file.path;
-            if (normalizedPath.startsWith('/')) {
-              normalizedPath = normalizedPath.substring(1);
-            }
-            if (!normalizedPath.startsWith('src/') && 
-                !normalizedPath.startsWith('public/') && 
-                normalizedPath !== 'index.html' && 
-                !configFiles.includes(normalizedPath.split('/').pop() || '')) {
-              normalizedPath = 'src/' + normalizedPath;
-            }
-            
-            const fullPath = `/home/user/app/${normalizedPath}`;
-            const isUpdate = global.existingFiles.has(normalizedPath);
-            
-            // Remove any CSS imports from JSX/JS files (we're using Tailwind)
-            let fileContent = file.content;
-            if (file.path.endsWith('.jsx') || file.path.endsWith('.js') || file.path.endsWith('.tsx') || file.path.endsWith('.ts')) {
-              fileContent = fileContent.replace(/import\s+['"]\.\/[^'"]+\.css['"];?\s*\n?/g, '');
-            }
-            
-            // Write the file using Node.js fs operations
+        // Initialize transactional file operations
+        const transactionalOps = new TransactionalFileOperations({
+          sandboxDir: '/home/user/app',
+          maxRetries: 3,
+          retryDelayMs: 200,
+          createBackups: true
+        });
+        
+        try {
+          // Begin transaction
+          const transactionId = await transactionalOps.beginTransaction();
+          console.log(`[apply-ai-code-stream] Started file transaction: ${transactionId}`);
+          
+          await sendProgress({
+            type: 'transaction-start',
+            transactionId,
+            message: 'Started transactional file operations'
+          });
+          
+          // Prepare files for transactional write
+          const processedFiles: Array<{ path: string; content: string }> = [];
+          
+          for (const [index, file] of filteredFiles.entries()) {
             try {
-              // Create directory if it doesn't exist
-              await mkdir(dirname(fullPath), { recursive: true });
+              // Send progress for each file
+              await sendProgress({
+                type: 'file-progress',
+                current: index + 1,
+                total: filteredFiles.length,
+                fileName: file.path,
+                action: 'processing'
+              });
               
-              // Write the file
-              await writeFile(fullPath, fileContent, 'utf8');
+              // Normalize the file path
+              let normalizedPath = file.path;
+              if (normalizedPath.startsWith('/')) {
+                normalizedPath = normalizedPath.substring(1);
+              }
+              if (!normalizedPath.startsWith('src/') && 
+                  !normalizedPath.startsWith('public/') && 
+                  normalizedPath !== 'index.html' && 
+                  !configFiles.includes(normalizedPath.split('/').pop() || '')) {
+                normalizedPath = 'src/' + normalizedPath;
+              }
               
-              console.log(`File written: ${fullPath}`);
-            } catch (fsError) {
-              throw new Error(`Failed to write file ${fullPath}: ${(fsError as Error).message}`);
-            }
-            
-            // Update local file cache
-            try {
-              await updateCacheFile(normalizedPath, fileContent);
-              console.log(`[apply-ai-code-stream] Updated local file cache for: ${normalizedPath}`);
+              // Check if this is an update
+              const isUpdate = global.existingFiles?.has(normalizedPath) || false;
+              
+              // Remove any CSS imports from JSX/JS files (we're using Tailwind)
+              let fileContent = file.content;
+              if (file.path.endsWith('.jsx') || file.path.endsWith('.js') || file.path.endsWith('.tsx') || file.path.endsWith('.ts')) {
+                fileContent = fileContent.replace(/import\s+['"]\.\/[^'"]+\.css['"];?\s*\n?/g, '');
+              }
+              
+              // Pre-flight checks
+              await withErrorHandling(async () => {
+                // Check disk space (estimate 10MB buffer)
+                const hasSpace = await FileOperationRecovery.checkDiskSpace(
+                  normalizedPath, 
+                  Buffer.byteLength(fileContent, 'utf8') + (10 * 1024 * 1024)
+                );
+                
+                if (!hasSpace) {
+                  throw new Error(`Insufficient disk space for file: ${normalizedPath}`);
+                }
+                
+                // Ensure parent directory can be created
+                await FileOperationRecovery.ensureDirectory(
+                  dirname(`/home/user/app/${normalizedPath}`)
+                );
+              }, 'file-preflight-check', normalizedPath);
+              
+              processedFiles.push({
+                path: normalizedPath,
+                content: fileContent
+              });
+              
+              // Track in results for progress reporting
+              if (isUpdate) {
+                if (results.filesUpdated) results.filesUpdated.push(normalizedPath);
+              } else {
+                if (results.filesCreated) results.filesCreated.push(normalizedPath);
+                if (global.existingFiles) global.existingFiles.add(normalizedPath);
+              }
+              
             } catch (error) {
-              console.error(`[apply-ai-code-stream] Failed to update local cache for ${normalizedPath}:`, error);
+              const systemError = await ErrorHandler.handleError(
+                error instanceof Error ? error : new Error(String(error)),
+                'file-processing',
+                file.path
+              );
+              
+              if (results.errors) {
+                results.errors.push(`Failed to process ${file.path}: ${systemError.message}`);
+              }
+              
+              await sendProgress({
+                type: 'file-error',
+                fileName: file.path,
+                error: systemError.message,
+                severity: systemError.context.severity,
+                recoveryActions: systemError.recoveryActions.map(a => a.description)
+              });
+              
+              // For critical errors, abort the entire transaction
+              if (systemError.context.severity === ErrorSeverity.CRITICAL) {
+                throw systemError;
+              }
             }
-            
-            if (isUpdate) {
-              if (results.filesUpdated) results.filesUpdated.push(normalizedPath);
-            } else {
-              if (results.filesCreated) results.filesCreated.push(normalizedPath);
-              if (global.existingFiles) global.existingFiles.add(normalizedPath);
-            }
+          }
+          
+          // Execute the transaction
+          await sendProgress({
+            type: 'transaction-execute',
+            message: `Executing transaction with ${processedFiles.length} files...`
+          });
+          
+          const transactionResult = await transactionalOps.executeTransaction(processedFiles);
+          
+          if (transactionResult.success) {
+            // Commit transaction
+            await transactionalOps.commitTransaction();
             
             await sendProgress({
-              type: 'file-complete',
-              fileName: normalizedPath,
-              action: isUpdate ? 'updated' : 'created'
+              type: 'transaction-complete',
+              transactionId,
+              message: `Transaction completed successfully`,
+              operations: transactionResult.operations.length
             });
-          } catch (error) {
+            
+            // Update local file cache for all written files
+            for (const file of processedFiles) {
+              try {
+                await updateCacheFile(file.path, file.content);
+                console.log(`[apply-ai-code-stream] Updated local file cache for: ${file.path}`);
+              } catch (error) {
+                console.error(`[apply-ai-code-stream] Failed to update local cache for ${file.path}:`, error);
+                // Don't fail the transaction for cache update errors
+              }
+            }
+            
+            // Send individual file completion messages
+            for (const operation of transactionResult.operations) {
+              await sendProgress({
+                type: 'file-complete',
+                fileName: operation.path,
+                action: operation.operation === 'update' ? 'updated' : 'created'
+              });
+            }
+            
+          } else {
+            // Transaction failed and was already rolled back
             if (results.errors) {
-              results.errors.push(`Failed to create ${file.path}: ${(error as Error).message}`);
+              results.errors.push(...transactionResult.errors);
             }
+            
             await sendProgress({
-              type: 'file-error',
-              fileName: file.path,
-              error: (error as Error).message
+              type: 'transaction-failed',
+              transactionId,
+              message: 'Transaction failed and was rolled back',
+              errors: transactionResult.errors
             });
+            
+            console.error(`[apply-ai-code-stream] Transaction ${transactionId} failed:`, transactionResult.errors);
+          }
+          
+        } catch (error) {
+          // Handle unexpected transaction errors
+          const systemError = await ErrorHandler.handleError(
+            error instanceof Error ? error : new Error(String(error)),
+            'file-transaction',
+            'multiple-files'
+          );
+          
+          if (results.errors) {
+            results.errors.push(`File transaction failed: ${systemError.message}`);
+          }
+          
+          await sendProgress({
+            type: 'transaction-error',
+            message: 'Critical transaction error occurred',
+            error: systemError.message,
+            severity: systemError.context.severity,
+            recoveryActions: systemError.recoveryActions.map(a => a.description)
+          });
+          
+          // Attempt emergency rollback if transaction is still active
+          if (transactionalOps.isTransactionActive()) {
+            try {
+              await transactionalOps.rollbackTransaction();
+              await sendProgress({
+                type: 'transaction-rollback',
+                message: 'Emergency rollback completed'
+              });
+            } catch (rollbackError) {
+              console.error('[apply-ai-code-stream] Emergency rollback failed:', rollbackError);
+            }
           }
         }
         
