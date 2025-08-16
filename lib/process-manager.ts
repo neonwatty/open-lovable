@@ -296,8 +296,8 @@ export class ProcessManager extends EventEmitter {
 
   private async isPortAvailable(port: number): Promise<boolean> {
     return new Promise((resolve) => {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { createServer } = require('net');
+      const net = require('net');
+      const { createServer } = net;
       const server = createServer();
       
       server.listen(port, () => {

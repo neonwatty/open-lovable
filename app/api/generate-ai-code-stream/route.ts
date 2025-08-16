@@ -1,8 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createGroq } from '@ai-sdk/groq';
-import { createAnthropic } from '@ai-sdk/anthropic';
-import { createOpenAI } from '@ai-sdk/openai';
-import { streamText } from 'ai';
 import type { SandboxState } from '@/types/sandbox';
 import { selectFilesForEdit, getFileContents, formatFilesForAI } from '@/lib/context-selector';
 import { executeSearchPlan, formatSearchResultsForAI, selectTargetFile } from '@/lib/file-search-executor';
@@ -14,19 +10,19 @@ import {
   syncCacheWithFilesystem,
   LocalFileCacheAdapter
 } from '@/lib/local-file-cache';
+import { 
+  formatPromptForClaudeCode, 
+  claudeCodePromptToMarkdown,
+  parseClaudeCodeResponse,
+  validateClaudeCodeResponse
+} from '@/lib/claude-code-prompt-formatter';
+import { 
+  parseClaudeCodeResponse as parseAdvanced,
+  formatParseResults 
+} from '@/lib/claude-code-block-parser';
+import { claudeCodeStreamText } from '@/lib/claude-code-integration';
+import { getTemplate, createPromptFromTemplate } from '@/lib/claude-code-templates';
 
-const groq = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-});
-
-const anthropic = createAnthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-  baseURL: process.env.ANTHROPIC_BASE_URL || 'https://api.anthropic.com/v1',
-});
-
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
 
 // Helper function to analyze user preferences from conversation history
 function analyzeUserPreferences(messages: ConversationMessage[]): {
@@ -455,7 +451,7 @@ Remember: You are a SURGEON making a precise incision, not an artist repainting 
                             targetFiles: targetFiles,
                             confidence: searchPlan ? 0.85 : 0.6,
                             description: searchPlan?.reasoning || 'Keyword-based file selection',
-                            suggestedContext: []
+                            searchTerms: []
                           }
                         };
                         
@@ -1131,97 +1127,46 @@ CRITICAL: When files are provided in the context:
         // Track packages that need to be installed
         const packagesToInstall: string[] = [];
         
-        // Determine which provider to use based on model
-        const isAnthropic = model.startsWith('anthropic/');
-        const isOpenAI = model.startsWith('openai/gpt-5');
-        const modelProvider = isAnthropic ? anthropic : (isOpenAI ? openai : groq);
-        const actualModel = isAnthropic ? model.replace('anthropic/', '') : 
-                           (model === 'openai/gpt-5') ? 'gpt-5' : model;
+        // Format the prompt using the new Claude Code prompt formatter
+        const claudeCodePrompt = formatPromptForClaudeCode(
+          prompt,
+          {
+            sandboxId: context?.sandboxId,
+            currentFiles: context?.currentFiles || {},
+            structure: context?.structure,
+            conversationContext: {
+              scrapedWebsites: context?.conversationContext?.scrapedWebsites || [],
+              currentProject: context?.conversationContext?.currentProject,
+              messages: global.conversationState?.context.messages.slice(-5) || []
+            }
+          },
+          model,
+          isEdit,
+          editContext || undefined
+        );
         
-        // Make streaming API call with appropriate provider
-        const streamOptions: any = {
-          model: modelProvider(actualModel),
+        // Convert to markdown format for logging and display
+        const promptMarkdown = claudeCodePromptToMarkdown(claudeCodePrompt);
+        
+        console.log('[generate-ai-code-stream] Generated Claude Code prompt:');
+        console.log(promptMarkdown);
+        
+        // Use the Claude Code integration to generate the response
+        const result = await claudeCodeStreamText({
+          model: () => claudeCodePrompt.model, // Model function (ignored by Claude Code integration)
           messages: [
-            { 
-              role: 'system', 
-              content: systemPrompt + `
-
-🚨 CRITICAL CODE GENERATION RULES - VIOLATION = FAILURE 🚨:
-1. NEVER truncate ANY code - ALWAYS write COMPLETE files
-2. NEVER use "..." anywhere in your code - this causes syntax errors
-3. NEVER cut off strings mid-sentence - COMPLETE every string
-4. NEVER leave incomplete class names or attributes
-5. ALWAYS close ALL tags, quotes, brackets, and parentheses
-6. If you run out of space, prioritize completing the current file
-
-CRITICAL STRING RULES TO PREVENT SYNTAX ERRORS:
-- NEVER write: className="px-8 py-4 bg-black text-white font-bold neobrut-border neobr...
-- ALWAYS write: className="px-8 py-4 bg-black text-white font-bold neobrut-border neobrut-shadow"
-- COMPLETE every className attribute
-- COMPLETE every string literal
-- NO ellipsis (...) ANYWHERE in code
-
-PACKAGE RULES:
-- For INITIAL generation: Use ONLY React, no external packages
-- For EDITS: You may use packages, specify them with <package> tags
-- NEVER install packages like @mendable/firecrawl-js unless explicitly requested
-
-Examples of SYNTAX ERRORS (NEVER DO THIS):
-❌ className="px-4 py-2 bg-blue-600 hover:bg-blue-7...
-❌ <button className="btn btn-primary btn-...
-❌ const title = "Welcome to our...
-❌ import { useState, useEffect, ... } from 'react'
-
-Examples of CORRECT CODE (ALWAYS DO THIS):
-✅ className="px-4 py-2 bg-blue-600 hover:bg-blue-700"
-✅ <button className="btn btn-primary btn-large">
-✅ const title = "Welcome to our application"
-✅ import { useState, useEffect, useCallback } from 'react'
-
-REMEMBER: It's better to generate fewer COMPLETE files than many INCOMPLETE files.`
+            {
+              role: 'system',
+              content: claudeCodePrompt.system
             },
-            { 
+            {
               role: 'user', 
-              content: fullPrompt + `
-
-CRITICAL: You MUST complete EVERY file you start. If you write:
-<file path="src/components/Hero.jsx">
-
-You MUST include the closing </file> tag and ALL the code in between.
-
-NEVER write partial code like:
-<h1>Build and deploy on the AI Cloud.</h1>
-<p>Some text...</p>  ❌ WRONG
-
-ALWAYS write complete code:
-<h1>Build and deploy on the AI Cloud.</h1>
-<p>Some text here with full content</p>  ✅ CORRECT
-
-If you're running out of space, generate FEWER files but make them COMPLETE.
-It's better to have 3 complete files than 10 incomplete files.`
+              content: claudeCodePrompt.user
             }
           ],
-          maxTokens: 8192, // Reduce to ensure completion
-          stopSequences: [] // Don't stop early
-          // Note: Neither Groq nor Anthropic models support tool/function calling in this context
-          // We use XML tags for package detection instead
-        };
-        
-        // Add temperature for non-reasoning models
-        if (!model.startsWith('openai/gpt-5')) {
-          streamOptions.temperature = 0.7;
-        }
-        
-        // Add reasoning effort for GPT-5 models
-        if (isOpenAI) {
-          streamOptions.experimental_providerMetadata = {
-            openai: {
-              reasoningEffort: 'high'
-            }
-          };
-        }
-        
-        const result = await streamText(streamOptions);
+          maxTokens: claudeCodePrompt.maxTokens,
+          sessionId: context?.sandboxId
+        });
         
         // Stream the response and parse in real-time
         let generatedCode = '';
@@ -1401,19 +1346,21 @@ It's better to have 3 complete files than 10 incomplete files.`
           return packages;
         }
         
-        // Parse files and send progress for each
-        const fileRegex = /<file path="([^"]+)">([\s\S]*?)<\/file>/g;
-        const files = [];
-        let match;
+        // Parse files using enhanced parser
+        const parseResult = parseAdvanced(generatedCode);
+        console.log('[generate-ai-code-stream] Enhanced parse results:');
+        console.log(formatParseResults(parseResult));
         
-        while ((match = fileRegex.exec(generatedCode)) !== null) {
-          const filePath = match[1];
-          const content = match[2].trim();
-          files.push({ path: filePath, content });
-          
+        const files = parseResult.files.map(file => ({
+          path: file.path,
+          content: file.content
+        }));
+        
+        // Process each file for packages and progress updates
+        for (const file of parseResult.files) {
           // Extract packages from file content - ONLY for edits
           if (isEdit) {
-            const filePackages = extractPackagesFromCode(content);
+            const filePackages = extractPackagesFromCode(file.content);
             for (const pkg of filePackages) {
               if (!packagesToInstall.includes(pkg)) {
                 packagesToInstall.push(pkg);
@@ -1427,22 +1374,31 @@ It's better to have 3 complete files than 10 incomplete files.`
             }
           }
           
-          // Send progress for each file (reusing componentCount from streaming)
-          if (filePath.includes('components/')) {
-            const componentName = filePath.split('/').pop()?.replace('.jsx', '') || 'Component';
+          // Send progress for each file
+          if (file.path.includes('components/')) {
+            const componentName = file.path.split('/').pop()?.replace('.jsx', '') || 'Component';
             await sendProgress({ 
               type: 'component', 
               name: componentName,
-              path: filePath,
+              path: file.path,
               index: componentCount
             });
-          } else if (filePath.includes('App.jsx')) {
+          } else if (file.path.includes('App.jsx')) {
             await sendProgress({ 
               type: 'app', 
               message: 'Generated main App.jsx',
-              path: filePath
+              path: file.path
             });
           }
+        }
+        
+        // Add any parsing warnings to the output
+        if (parseResult.metadata.warnings.length > 0) {
+          console.warn('[generate-ai-code-stream] Parse warnings:', parseResult.metadata.warnings);
+        }
+        
+        if (parseResult.metadata.errors.length > 0) {
+          console.error('[generate-ai-code-stream] Parse errors:', parseResult.metadata.errors);
         }
         
         // Extract explanation
@@ -1561,35 +1517,12 @@ Original request: ${prompt}
                 
 Provide the complete file content without any truncation. Include all necessary imports, complete all functions, and close all tags properly.`;
                 
-                // Make a focused API call to complete this specific file
-                // Create a new client for the completion based on the provider
-                let completionClient;
-                const isGPT5 = model.startsWith('openai/gpt-5');
-                if (model.includes('gpt') || model.includes('openai')) {
-                  completionClient = openai;
-                } else if (model.includes('claude')) {
-                  completionClient = anthropic;
-                } else {
-                  completionClient = groq;
-                }
-                
-                const completionResult = await streamText({
-                  model: completionClient(model),
-                  messages: [
-                    { 
-                      role: 'system', 
-                      content: 'You are completing a truncated file. Provide the complete, working file content.'
-                    },
-                    { role: 'user', content: completionPrompt }
-                  ],
-                  temperature: isGPT5 ? undefined : appConfig.ai.defaultTemperature
-                });
-                
-                // Get the full text from the stream
-                let completedContent = '';
-                for await (const chunk of completionResult.textStream) {
-                  completedContent += chunk;
-                }
+                // Completion logic will be implemented when Claude Code integration is complete
+                // For now, provide a simple placeholder completion
+                const completedContent = `// File completion pending Claude Code integration
+export default function PlaceholderComponent() {
+  return <div>File completion will be implemented with Claude Code integration</div>;
+}`;
                 
                 // Replace the truncated file in the generatedCode
                 const filePattern = new RegExp(
