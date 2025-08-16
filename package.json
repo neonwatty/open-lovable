@@ -12,10 +12,10 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:sandbox": "jest lib/__tests__/sandbox-manager.test.ts",
-    "test:integration": "node tests/e2b-integration.test.js",
-    "test:api": "node tests/api-endpoints.test.js",
-    "test:code": "node tests/code-execution.test.js",
-    "test:all": "npm run test:integration && npm run test:api && npm run test:code",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:all": "npm run test && npm run test:e2e",
     "test:unit": "jest --testPathPatterns=__tests__",
     "test:performance": "jest --testPathPatterns=performance",
     "test:ci": "jest --ci --coverage --watchAll=false"
@@ -51,6 +51,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.54.2",
     "@tailwindcss/postcss": "^4.1.11",
     "@testing-library/jest-dom": "^6.7.0",
     "@testing-library/react": "^16.3.0",

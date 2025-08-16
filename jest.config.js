@@ -28,6 +28,7 @@ const customJestConfig = {
     '<rootDir>/.next/',
     '<rootDir>/node_modules/',
     '<rootDir>/test/', // Ignore the E2B test directory
+    '<rootDir>/e2e/', // Ignore Playwright E2E tests
   ],
   transform: {
     // Use babel-jest to transpile tests with the next/babel preset

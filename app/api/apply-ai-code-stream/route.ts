@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Sandbox } from '@e2b/code-interpreter';
+import { mkdir, writeFile } from 'fs/promises';
+import { dirname } from 'path';
 import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
 
@@ -463,7 +465,7 @@ export async function POST(request: NextRequest) {
                       if (data.type === 'success' && data.installedPackages) {
                         results.packagesInstalled = data.installedPackages;
                       }
-                    } catch (e) {
+                    } catch {
                       // Ignore parse errors
                     }
                   }
@@ -534,19 +536,18 @@ export async function POST(request: NextRequest) {
               fileContent = fileContent.replace(/import\s+['"]\.\/[^'"]+\.css['"];?\s*\n?/g, '');
             }
             
-            // Write the file using Python (code-interpreter SDK)
-            const escapedContent = fileContent
-              .replace(/\\/g, '\\\\')
-              .replace(/"""/g, '\\"\\"\\"')
-              .replace(/\$/g, '\\$');
-            
-            await sandboxInstance.runCode(`
-import os
-os.makedirs(os.path.dirname("${fullPath}"), exist_ok=True)
-with open("${fullPath}", 'w') as f:
-    f.write("""${escapedContent}""")
-print(f"File written: ${fullPath}")
-            `);
+            // Write the file using Node.js fs operations
+            try {
+              // Create directory if it doesn't exist
+              await mkdir(dirname(fullPath), { recursive: true });
+              
+              // Write the file
+              await writeFile(fullPath, fileContent, 'utf8');
+              
+              console.log(`File written: ${fullPath}`);
+            } catch (fsError) {
+              throw new Error(`Failed to write file ${fullPath}: ${(fsError as Error).message}`);
+            }
             
             // Update file cache
             if (global.sandboxState?.fileCache) {
