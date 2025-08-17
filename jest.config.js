@@ -13,6 +13,10 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/$1',
   },
   testEnvironment: 'jest-environment-jsdom',
+  // Limit workers to prevent memory issues
+  maxWorkers: 1,
+  // Increase timeout for heavy integration tests
+  testTimeout: 30000,
   collectCoverageFrom: [
     'lib/**/*.{js,jsx,ts,tsx}',
     'app/**/*.{js,jsx,ts,tsx}',

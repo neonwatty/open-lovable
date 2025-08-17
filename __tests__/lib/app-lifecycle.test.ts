@@ -39,8 +39,9 @@ describe('App Lifecycle Integration', () => {
     });
     mockProcessCleanupManager.on.mockImplementation(() => {});
     
-    // Reset the instance initialization state
-    (appLifecycle as any).initialized = false;
+    // Reset the initialization state of the current instance
+    // @ts-ignore - accessing private member for testing
+    appLifecycle.initialized = false;
   });
 
   describe('Initialization', () => {
