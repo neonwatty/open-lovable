@@ -12,7 +12,8 @@ DO NOT change the version number.
 Steps:
 1. If directory argument provided, navigate to that directory first
 2. Run appropriate test command:
-   - `npm test $ARGUMENTS` (Jest/Vitest tests)
+   - `npm run test:unit` (Unit tests - 100% pass rate)
+   - `npm run test:integration` (Integration tests - 100% pass rate)
    - `npm run test:e2e $ARGUMENTS` (if e2e tests exist)
    - `npm run build` (to verify Next.js build)
 3. Analyze any test failures or errors including:

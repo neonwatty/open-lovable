@@ -24,8 +24,12 @@ export default function HMRErrorDetector({ iframeRef, onErrorDetected }: HMRErro
           if (messageElement) {
             const errorText = messageElement.textContent || '';
             
-            // Parse import errors
+            // Parse various types of local development errors
             const importMatch = errorText.match(/Failed to resolve import "([^"]+)"/);
+            const syntaxMatch = errorText.match(/SyntaxError/);
+            const viteMatch = errorText.match(/Vite/);
+            const portMatch = errorText.match(/EADDRINUSE.*:(\d+)/);
+            
             if (importMatch) {
               const packageName = importMatch[1];
               if (!packageName.startsWith('.')) {
@@ -40,10 +44,26 @@ export default function HMRErrorDetector({ iframeRef, onErrorDetected }: HMRErro
 
                 onErrorDetected([{
                   type: 'npm-missing',
-                  message: `Failed to resolve import "${packageName}"`,
+                  message: `Missing package "${packageName}" - Click 'Install Packages' above or run 'npm install ${finalPackage}' in your terminal`,
                   package: finalPackage
                 }]);
               }
+            } else if (portMatch) {
+              const port = portMatch[1];
+              onErrorDetected([{
+                type: 'port-conflict',
+                message: `Port ${port} is already in use. Please stop other development servers or use a different port.`
+              }]);
+            } else if (syntaxMatch) {
+              onErrorDetected([{
+                type: 'syntax-error',
+                message: 'Syntax error detected in your code. Please check the file content and fix any syntax issues.'
+              }]);
+            } else if (viteMatch) {
+              onErrorDetected([{
+                type: 'vite-error',
+                message: 'Vite development server error. Try restarting the server with "npm run dev".'
+              }]);
             }
           }
         }

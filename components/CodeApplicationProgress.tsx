@@ -2,11 +2,12 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export interface CodeApplicationState {
-  stage: 'analyzing' | 'installing' | 'applying' | 'complete' | null;
+  stage: 'setting-up' | 'installing' | 'starting-server' | 'generating' | 'applying' | 'complete' | null;
   packages?: string[];
   installedPackages?: string[];
   filesGenerated?: string[];
   message?: string;
+  serverStatus?: 'starting' | 'running' | 'stopped' | 'error';
 }
 
 interface CodeApplicationProgressProps {
@@ -48,12 +49,60 @@ export default function CodeApplicationProgress({ state }: CodeApplicationProgre
             </svg>
           </motion.div>
 
-          {/* Simple loading text */}
-          <div className="text-sm font-medium text-gray-700">
-            Applying to sandbox...
+          {/* Dynamic progress text and status */}
+          <div className="flex items-center gap-2">
+            <div className="text-sm font-medium text-gray-700">
+              {getStageMessage(state.stage)}
+            </div>
+            {state.serverStatus && (
+              <ServerStatusIndicator status={state.serverStatus} />
+            )}
           </div>
         </div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function getStageMessage(stage: CodeApplicationState['stage']): string {
+  switch (stage) {
+    case 'setting-up':
+      return 'Setting up local workspace...';
+    case 'installing':
+      return 'Installing dependencies...';
+    case 'starting-server':
+      return 'Starting Vite development server...';
+    case 'generating':
+      return 'Generating code...';
+    case 'applying':
+      return 'Applying changes to local files...';
+    default:
+      return 'Processing...';
+  }
+}
+
+function ServerStatusIndicator({ status }: { status: CodeApplicationState['serverStatus'] }) {
+  const getStatusConfig = () => {
+    switch (status) {
+      case 'starting':
+        return { color: 'bg-yellow-400', label: 'Starting' };
+      case 'running':
+        return { color: 'bg-green-400', label: 'Running' };
+      case 'stopped':
+        return { color: 'bg-red-400', label: 'Stopped' };
+      case 'error':
+        return { color: 'bg-red-500', label: 'Error' };
+      default:
+        return { color: 'bg-gray-400', label: 'Unknown' };
+    }
+  };
+
+  const { color, label } = getStatusConfig();
+
+  return (
+    <div className="flex items-center gap-1">
+      <div className={`w-2 h-2 rounded-full ${color}`} />
+      <span className="text-xs text-gray-600">{label}</span>
+    </div>
   );
 }

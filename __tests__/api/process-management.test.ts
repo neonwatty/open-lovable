@@ -6,7 +6,7 @@ import { NextRequest } from 'next/server';
 import { POST as killSandbox } from '../../app/api/kill-sandbox/route';
 import { POST as restartVite } from '../../app/api/restart-vite/route';
 import { POST as runCommand } from '../../app/api/run-command/route';
-import { GET as sandboxStatus, POST as sandboxStatusPost } from '../../app/api/sandbox-status/route';
+import { GET as sandboxStatus } from '../../app/api/sandbox-status/route';
 import { processCleanupManager } from '../../lib/process-cleanup-manager';
 import { spawn } from 'child_process';
 import fs from 'fs/promises';
@@ -339,18 +339,12 @@ describe.skip('API Routes - Process Management', () => {
       killSpy.mockRestore();
     });
 
-    it('should perform health checks via POST', async () => {
-      const request = new NextRequest('http://localhost:3000/api/sandbox-status', {
-        method: 'POST',
-        body: JSON.stringify({ action: 'health-check' })
-      });
-
-      const response = await sandboxStatusPost(request);
+    it('should perform health checks via GET', async () => {
+      const response = await sandboxStatus();
       
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data.success).toBe(true);
-      expect(data.action).toBe('health-check');
     });
   });
 });

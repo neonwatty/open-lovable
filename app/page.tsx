@@ -46,11 +46,16 @@ function AISandboxContent() {
   const [sandboxData, setSandboxData] = useState<SandboxData | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ text: 'Not connected', active: false });
-  const [structureContent, setStructureContent] = useState('No sandbox created yet');
+  const [localhostStatus, setLocalhostStatus] = useState<{
+    connected: boolean;
+    loading: boolean;
+    lastChecked?: Date;
+  }>({ connected: false, loading: false });
+  const [structureContent, setStructureContent] = useState('No local development environment set up yet');
   const [promptInput, setPromptInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
     {
-      content: 'Welcome! I can help you generate code with full context of your sandbox files and structure. Just start chatting - I\'ll automatically create a sandbox for you if needed!\n\nTip: If you see package errors like "react-router-dom not found", just type "npm install" or "check packages" to automatically install missing packages.',
+      content: 'Welcome! I can help you generate code for your local React development environment. Just start chatting and I\'ll help you build your app!\n\n💡 Tips:\n• Make sure your local development server is running on port 5173 (npm run dev)\n• I can automatically detect and install missing npm packages\n• If you see import errors, just ask me to "install packages" or "check packages"',
       type: 'system',
       timestamp: new Date()
     }
@@ -59,10 +64,8 @@ function AISandboxContent() {
   const [aiEnabled] = useState(true);
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [aiModel, setAiModel] = useState(() => {
-    const modelParam = searchParams.get('model');
-    return appConfig.ai.availableModels.includes(modelParam || '') ? modelParam! : appConfig.ai.defaultModel;
-  });
+  // Hardcoded to use Claude Code only
+  const aiModel = 'claude-code';
   const [urlInput, setUrlInput] = useState('');
   const [showHomeScreen, setShowHomeScreen] = useState(true);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['app', 'src', 'src/components']));
@@ -201,6 +204,17 @@ function AISandboxContent() {
     }
   }, [showHomeScreen, homeUrlInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Check localhost connection periodically
+  useEffect(() => {
+    // Initial check
+    checkLocalhostConnection();
+    
+    // Set up periodic checking every 30 seconds
+    const interval = setInterval(checkLocalhostConnection, 30000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
 
   useEffect(() => {
     // Only check sandbox status on mount and when user navigates to the page
@@ -241,6 +255,38 @@ function AISandboxContent() {
       }
       return [...prev, { content, type, timestamp: new Date(), metadata }];
     });
+  };
+
+  // Enhanced error handling helper for local development
+  const handleLocalDevError = (error: any, context: string, allowRetry: boolean = true) => {
+    let errorMessage = `${context} failed`;
+    let helpfulTip = '';
+    
+    if (error.message.includes('ECONNREFUSED') || error.message.includes('connection refused')) {
+      errorMessage = 'Cannot connect to local development server on port 5173';
+      helpfulTip = '\n\n💡 Tip: Run "npm run dev" in your terminal to start the local server.';
+    } else if (error.message.includes('EADDRINUSE') || error.message.includes('port')) {
+      errorMessage = 'Port 5173 is already in use by another application';
+      helpfulTip = '\n\n💡 Tip: Stop other development servers or use a different port.';
+    } else if (error.message.includes('ENOTFOUND') || error.message.includes('network')) {
+      errorMessage = 'Network connection failed';
+      helpfulTip = '\n\n💡 Tip: Check your internet connection and try again.';
+    } else if (error.message.includes('EACCES') || error.message.includes('permission')) {
+      errorMessage = 'Permission denied';
+      helpfulTip = '\n\n💡 Tip: Check file and folder permissions.';
+    } else if (error.message.includes('ENOSPC')) {
+      errorMessage = 'Not enough disk space available';
+      helpfulTip = '\n\n💡 Tip: Free up some disk space and try again.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = 'Operation timed out';
+      helpfulTip = '\n\n💡 Tip: The server may be overloaded. Try refreshing the page.';
+    } else if (error.message.includes('npm') || error.message.includes('install')) {
+      errorMessage = 'Package installation failed';
+      helpfulTip = '\n\n💡 Tip: Check npm configuration or try "npm cache clean --force".';
+    }
+    
+    addChatMessage(`⚠️ ${errorMessage}${helpfulTip}`, 'error');
+    return errorMessage;
   };
   
   const checkAndInstallPackages = async () => {
@@ -318,7 +364,7 @@ function AISandboxContent() {
         }
       }
     } catch (error: any) {
-      addChatMessage(`Failed to install packages: ${error.message}`, 'system');
+      handleLocalDevError(error, 'Package installation');
     }
   };
 
@@ -345,11 +391,40 @@ function AISandboxContent() {
     }
   };
 
+  const checkLocalhostConnection = async () => {
+    setLocalhostStatus(prev => ({ ...prev, loading: true }));
+    
+    try {
+      const localhostUrl = 'http://localhost:5173';
+      const response = await fetch(localhostUrl, {
+        method: 'HEAD',
+        mode: 'no-cors', // Bypass CORS for connection check
+        signal: AbortSignal.timeout(5000) // 5 second timeout
+      });
+      
+      setLocalhostStatus({
+        connected: true,
+        loading: false,
+        lastChecked: new Date()
+      });
+      
+      console.log('[localhost] Successfully connected to localhost:5173');
+    } catch (error) {
+      setLocalhostStatus({
+        connected: false,
+        loading: false,
+        lastChecked: new Date()
+      });
+      
+      console.log('[localhost] Cannot connect to localhost:5173:', error);
+    }
+  };
+
   const createSandbox = async (fromHomeScreen = false) => {
     console.log('[createSandbox] Starting sandbox creation...');
     setLoading(true);
     setShowLoadingBackground(true);
-    updateStatus('Creating sandbox...', false);
+    updateStatus('Setting up local development environment...', false);
     setResponseArea([]);
     setScreenshotError(null);
     
@@ -373,7 +448,6 @@ function AISandboxContent() {
         // Update URL with sandbox ID
         const newParams = new URLSearchParams(searchParams.toString());
         newParams.set('sandbox', data.sandboxId);
-        newParams.set('model', aiModel);
         router.push(`/?${newParams.toString()}`, { scroll: false });
         
         // Fade out loading background after sandbox loads
@@ -410,14 +484,15 @@ function AISandboxContent() {
         
         // Only add welcome message if not coming from home screen
         if (!fromHomeScreen) {
-          addChatMessage(`Sandbox created! ID: ${data.sandboxId}. I now have context of your sandbox and can help you build your app. Just ask me to create components and I'll automatically apply them!
+          addChatMessage(`✅ Local development environment ready! I can now help you build your React app. Just ask me to create components and I'll automatically apply them to your local project!
 
-Tip: I automatically detect and install npm packages from your code imports (like react-router-dom, axios, etc.)`, 'system');
+💡 Tip: I automatically detect and install npm packages from your code imports (like react-router-dom, axios, etc.)`, 'system');
         }
         
         setTimeout(() => {
           if (iframeRef.current) {
-            iframeRef.current.src = data.url;
+            // Use localhost for local development
+            iframeRef.current.src = 'http://localhost:5173';
           }
         }, 100);
       } else {
@@ -426,8 +501,9 @@ Tip: I automatically detect and install npm packages from your code imports (lik
     } catch (error: any) {
       console.error('[createSandbox] Error:', error);
       updateStatus('Error', false);
-      log(`Failed to create sandbox: ${error.message}`, 'error');
-      addChatMessage(`Failed to create sandbox: ${error.message}`, 'system');
+      
+      const errorMessage = handleLocalDevError(error, 'Local development environment setup');
+      log(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
@@ -447,7 +523,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
     
     try {
       // Show progress component instead of individual messages
-      setCodeApplicationState({ stage: 'analyzing' });
+      setCodeApplicationState({ stage: 'setting-up' });
       
       // Get pending packages from tool calls
       const pendingPackages = ((window as any).pendingPackages || []).filter((pkg: any) => pkg && typeof pkg === 'string');
@@ -493,7 +569,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
               switch (data.type) {
                 case 'start':
                   // Don't add as chat message, just update state
-                  setCodeApplicationState({ stage: 'analyzing' });
+                  setCodeApplicationState({ stage: 'setting-up' });
                   break;
                   
                 case 'step':
@@ -628,7 +704,8 @@ Tip: I automatically detect and install npm packages from your code imports (lik
             setTimeout(() => {
               // Force refresh the iframe to show new files
               if (iframeRef.current) {
-                iframeRef.current.src = iframeRef.current.src;
+                const localUrl = 'http://localhost:5173';
+                iframeRef.current.src = `${localUrl}?t=${Date.now()}`;
               }
             }, 1000);
           }
@@ -753,11 +830,12 @@ Tip: I automatically detect and install npm packages from your code imports (lik
           const refreshDelay = appConfig.codeApplication.defaultRefreshDelay; // Allow Vite to process changes
           
           setTimeout(() => {
-            if (iframeRef.current && sandboxData?.url) {
+            if (iframeRef.current) {
               console.log('[home] Refreshing iframe after code application...');
               
-              // Method 1: Change src with timestamp
-              const urlWithTimestamp = `${sandboxData.url}?t=${Date.now()}&applied=true`;
+              // Method 1: Change src with timestamp  
+              const localUrl = 'http://localhost:5173';
+              const urlWithTimestamp = `${localUrl}?t=${Date.now()}&applied=true`;
               iframeRef.current.src = urlWithTimestamp;
               
               // Method 2: Force reload after a short delay
@@ -786,14 +864,15 @@ Tip: I automatically detect and install npm packages from your code imports (lik
             console.log(`[applyGeneratedCode] Packages installed: ${packagesInstalled}, refresh delay: ${refreshDelay}ms`);
             
             setTimeout(async () => {
-            if (iframeRef.current && sandboxData?.url) {
+            if (iframeRef.current) {
+              const localUrl = 'http://localhost:5173';
               console.log('[applyGeneratedCode] Starting iframe refresh sequence...');
               console.log('[applyGeneratedCode] Current iframe src:', iframeRef.current.src);
-              console.log('[applyGeneratedCode] Sandbox URL:', sandboxData.url);
+              console.log('[applyGeneratedCode] Localhost URL:', localUrl);
               
               // Method 1: Try direct navigation first
               try {
-                const urlWithTimestamp = `${sandboxData.url}?t=${Date.now()}&force=true`;
+                const urlWithTimestamp = `${localUrl}?t=${Date.now()}&force=true`;
                 console.log('[applyGeneratedCode] Attempting direct navigation to:', urlWithTimestamp);
                 
                 // Remove any existing onload handler
@@ -839,7 +918,7 @@ Tip: I automatically detect and install npm packages from your code imports (lik
               iframeRef.current.remove();
               
               // Add new iframe
-              newIframe.src = `${sandboxData.url}?t=${Date.now()}&recreated=true`;
+              newIframe.src = `${localUrl}?t=${Date.now()}&recreated=true`;
               parent?.appendChild(newIframe);
               
               // Update ref
@@ -860,7 +939,8 @@ Tip: I automatically detect and install npm packages from your code imports (lik
         addChatMessage('Code application may have partially succeeded. Check the preview.', 'system');
       }
     } catch (error: any) {
-      log(`Failed to apply code: ${error.message}`, 'error');
+      const errorMessage = handleLocalDevError(error, 'Code application');
+      log(errorMessage, 'error');
     } finally {
       setLoading(false);
       // Clear isEdit flag after applying code
@@ -911,19 +991,31 @@ Tip: I automatically detect and install npm packages from your code imports (lik
           
           // Refresh the iframe after a short delay
           setTimeout(() => {
-            if (iframeRef.current && sandboxData?.url) {
-              iframeRef.current.src = `${sandboxData.url}?t=${Date.now()}`;
+            if (iframeRef.current) {
+              const localUrl = 'http://localhost:5173';
+              iframeRef.current.src = `${localUrl}?t=${Date.now()}`;
             }
           }, 2000);
         } else {
-          addChatMessage(`Failed to restart Vite: ${data.error}`, 'error');
+          addChatMessage(`⚠️ Failed to restart local development server: ${data.error || 'Unknown error'}`, 'error');
         }
       } else {
-        addChatMessage('Failed to restart Vite server', 'error');
+        addChatMessage('⚠️ Failed to restart local development server. Please check if Vite is properly installed.', 'error');
       }
     } catch (error) {
       console.error('[restartViteServer] Error:', error);
-      addChatMessage(`Error restarting Vite: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
+      const err = error instanceof Error ? error : new Error('Unknown error');
+      let errorMessage = 'Error restarting local development server';
+      
+      if (err.message.includes('ECONNREFUSED')) {
+        errorMessage = 'Cannot connect to local development server. Please ensure it\'s running on port 5173.';
+      } else if (err.message.includes('ENOENT')) {
+        errorMessage = 'Vite command not found. Please ensure Vite is installed: npm install vite';
+      } else if (err.message.includes('port')) {
+        errorMessage = 'Port conflict detected. Please check if another server is using port 5173.';
+      }
+      
+      addChatMessage(`⚠️ ${errorMessage}`, 'error');
     }
   };
 
@@ -1379,29 +1471,81 @@ Tip: I automatically detect and install npm packages from your code imports (lik
         );
       }
       
-      // Show sandbox iframe only when not in any loading state
-      if (sandboxData?.url && !loading) {
+      // Show localhost connection loading state when server is not available
+      if (sandboxData?.url && !loading && !localhostStatus.connected && localhostStatus.lastChecked) {
+        return (
+          <div className="flex items-center justify-center h-full bg-gray-50">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Waiting for Local Server
+              </h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Please start your local development server at localhost:5173
+              </p>
+              <div className="text-xs text-gray-500 mb-3">
+                Run: <code className="bg-gray-200 px-2 py-1 rounded">npm run dev</code>
+              </div>
+              <button
+                onClick={checkLocalhostConnection}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+              >
+                Check Connection
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      // Show sandbox iframe only when not in any loading state and localhost is connected
+      if (sandboxData?.url && !loading && (localhostStatus.connected || !localhostStatus.lastChecked)) {
+        const localhostUrl = 'http://localhost:5173';
+        
         return (
           <div className="relative w-full h-full">
             <iframe
               ref={iframeRef}
-              src={sandboxData.url}
+              src={localhostUrl}
               className="w-full h-full border-none"
-              title="Open Lovable Sandbox"
+              title="Local Development Server"
               allow="clipboard-write"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
+              onError={() => {
+                console.log('[iframe] Error loading localhost:5173');
+                setLocalhostStatus(prev => ({ ...prev, connected: false }));
+                addChatMessage('⚠️ Cannot connect to localhost:5173. Make sure your local development server is running.', 'error');
+              }}
+              onLoad={() => {
+                console.log('[iframe] Successfully loaded localhost:5173');
+                setLocalhostStatus(prev => ({ ...prev, connected: true }));
+              }}
             />
+            {/* Connection status indicator */}
+            <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg">
+              <div className={`w-2 h-2 rounded-full ${
+                localhostStatus.loading ? 'bg-yellow-500 animate-pulse' :
+                localhostStatus.connected ? 'bg-green-500' : 'bg-red-500'
+              }`}></div>
+              <span className="text-sm text-gray-700">localhost:5173</span>
+              <button
+                onClick={checkLocalhostConnection}
+                className="text-xs text-blue-600 hover:text-blue-800 ml-1"
+                title="Check connection"
+              >
+                ↻
+              </button>
+            </div>
             {/* Refresh button */}
             <button
               onClick={() => {
-                if (iframeRef.current && sandboxData?.url) {
+                if (iframeRef.current) {
                   console.log('[Manual Refresh] Forcing iframe reload...');
-                  const newSrc = `${sandboxData.url}?t=${Date.now()}&manual=true`;
+                  const newSrc = `${localhostUrl}?t=${Date.now()}&manual=true`;
                   iframeRef.current.src = newSrc;
                 }
               }}
               className="absolute bottom-4 right-4 bg-white/90 hover:bg-white text-gray-700 p-2 rounded-lg shadow-lg transition-all duration-200 hover:scale-105"
-              title="Refresh sandbox"
+              title="Refresh local server"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -2946,31 +3090,11 @@ Focus on the key sections and content, making it clean and modern.`;
                   )}
               </form>
               
-              {/* Model Selector */}
+              {/* Model Display - Non-interactive */}
               <div className="mt-6 flex items-center justify-center animate-[fadeIn_1s_ease-out]">
-                <select
-                  value={aiModel}
-                  onChange={(e) => {
-                    const newModel = e.target.value;
-                    setAiModel(newModel);
-                    const params = new URLSearchParams(searchParams);
-                    params.set('model', newModel);
-                    if (sandboxData?.sandboxId) {
-                      params.set('sandbox', sandboxData.sandboxId);
-                    }
-                    router.push(`/?${params.toString()}`);
-                  }}
-                  className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
-                  style={{
-                    boxShadow: '0 0 0 1px #e3e1de66, 0 1px 2px #5f4a2e14'
-                  }}
-                >
-                  {appConfig.ai.availableModels.map(model => (
-                    <option key={model} value={model}>
-                      {appConfig.ai.modelDisplayNames[model as keyof typeof appConfig.ai.modelDisplayNames] || model}
-                    </option>
-                  ))}
-                </select>
+                <div className="px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-[10px] text-gray-600">
+                  Claude Code
+                </div>
               </div>
             </div>
           </div>
@@ -2986,27 +3110,10 @@ Focus on the key sections and content, making it clean and modern.`;
           />
         </div>
         <div className="flex items-center gap-2">
-          {/* Model Selector - Left side */}
-          <select
-            value={aiModel}
-            onChange={(e) => {
-              const newModel = e.target.value;
-              setAiModel(newModel);
-              const params = new URLSearchParams(searchParams);
-              params.set('model', newModel);
-              if (sandboxData?.sandboxId) {
-                params.set('sandbox', sandboxData.sandboxId);
-              }
-              router.push(`/?${params.toString()}`);
-            }}
-            className="px-3 py-1.5 text-sm bg-white border border-gray-300 rounded-[10px] focus:outline-none focus:ring-2 focus:ring-[#36322F] focus:border-transparent"
-          >
-            {appConfig.ai.availableModels.map(model => (
-              <option key={model} value={model}>
-                {appConfig.ai.modelDisplayNames[model as keyof typeof appConfig.ai.modelDisplayNames] || model}
-              </option>
-            ))}
-          </select>
+          {/* Model Display - Non-interactive */}
+          <div className="px-3 py-1.5 text-sm bg-gray-50 border border-gray-200 rounded-[10px] text-gray-600">
+            Claude Code
+          </div>
           <Button 
             variant="code"
             onClick={() => createSandbox()}

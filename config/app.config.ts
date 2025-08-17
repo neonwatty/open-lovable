@@ -183,6 +183,20 @@ export const appConfig = {
     
     // Enable request logging in development
     enableLogging: process.env.NODE_ENV === 'development',
+  },
+
+  // AI Model Configuration
+  ai: {
+    // Available AI models (hardcoded to Claude Code only)
+    availableModels: ['claude-code'],
+    
+    // Default AI model
+    defaultModel: 'claude-code',
+    
+    // Display names for models
+    modelDisplayNames: {
+      'claude-code': 'Claude Code'
+    }
   }
 };
 

@@ -36,14 +36,14 @@ export async function POST() {
     }
 
     // Create base sandbox - we'll set up Vite ourselves for full control
-    console.log(`[create-ai-sandbox] Creating base E2B sandbox with ${appConfig.e2b.timeoutMinutes} minute timeout...`);
+    console.log(`[create-ai-sandbox] Creating base E2B sandbox with ${appConfig.sandbox.timeoutMinutes} minute timeout...`);
     sandbox = await Sandbox.create({ 
       apiKey: process.env.E2B_API_KEY,
-      timeoutMs: appConfig.e2b.timeoutMs
+      timeoutMs: appConfig.sandbox.timeoutMs
     });
     
     const sandboxId = (sandbox as any).sandboxId || Date.now().toString();
-    const host = (sandbox as any).getHost(appConfig.e2b.vitePort);
+    const host = (sandbox as any).getHost(appConfig.sandbox.vitePort);
     
     console.log(`[create-ai-sandbox] Sandbox created: ${sandboxId}`);
     console.log(`[create-ai-sandbox] Sandbox host: ${host}`);
@@ -278,7 +278,7 @@ print('Waiting for server to be ready...')
     `);
     
     // Wait for Vite to be fully ready
-    await new Promise(resolve => setTimeout(resolve, appConfig.e2b.viteStartupDelay));
+    await new Promise(resolve => setTimeout(resolve, appConfig.sandbox.viteStartupDelay));
     
     // Force Tailwind CSS to rebuild by touching the CSS file
     await sandbox.runCode(`
@@ -305,8 +305,8 @@ print('✓ Tailwind CSS should be loaded')
     
     // Set extended timeout on the sandbox instance if method available
     if (typeof sandbox.setTimeout === 'function') {
-      sandbox.setTimeout(appConfig.e2b.timeoutMs);
-      console.log(`[create-ai-sandbox] Set sandbox timeout to ${appConfig.e2b.timeoutMinutes} minutes`);
+      sandbox.setTimeout(appConfig.sandbox.timeoutMs);
+      console.log(`[create-ai-sandbox] Set sandbox timeout to ${appConfig.sandbox.timeoutMinutes} minutes`);
     }
     
     // Initialize sandbox state
