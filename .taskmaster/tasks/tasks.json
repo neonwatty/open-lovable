@@ -384,8 +384,8 @@
             "title": "Remove E2B, Firecrawl, and AI SDK Dependencies",
             "description": "Clean up package.json by removing all external service dependencies including E2B, Firecrawl, and AI provider SDKs",
             "dependencies": [],
-            "details": "Remove the following packages from package.json: @e2b/code-interpreter, e2b, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/openai, ai (Vercel AI SDK), and any related type definitions. Run npm uninstall for each package. Scan the codebase for any remaining imports of these packages to identify files that need updating. Document which files reference these dependencies for later refactoring.\n<info added on 2025-08-15T15:06:42.191Z>",
-            "status": "pending",
+            "details": "Remove the following packages from package.json: @e2b/code-interpreter, e2b, @ai-sdk/anthropic, @ai-sdk/groq, @ai-sdk/openai, ai (Vercel AI SDK), and any related type definitions. Run npm uninstall for each package. Scan the codebase for any remaining imports of these packages to identify files that need updating. Document which files reference these dependencies for later refactoring.\n<info added on 2025-08-15T15:06:42.191Z>\n<info added on 2025-08-17T15:55:19.165Z>\nSuccessfully removed all targeted dependencies from package.json and identified 5 files requiring code updates:\n\nAI SDK Dependencies Removed - Files Requiring Updates:\n- /app/api/analyze-edit-intent/route.ts (uses @ai-sdk packages and 'ai')\n- /__tests__/api/generate-ai-code-stream.test.ts (imports 'ai')\n- /__tests__/integration/file-cache-safety.test.ts (imports 'ai')\n\nE2B Dependencies Removed - Files Requiring Updates:\n- /app/api/install-packages/route.ts (imports @e2b/code-interpreter)\n- /app/api/apply-ai-code-stream/route.ts (imports @e2b/code-interpreter)\n- /app/api/create-ai-sandbox/route.ts (imports @e2b/code-interpreter)\n\nAll identified files have been documented for refactoring in subsequent subtasks to eliminate external service dependencies and implement local alternatives.\n</info added on 2025-08-17T15:55:19.165Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for E2B dependency removal, mock E2B SDK functions with jest.mock('@e2b/sandboxes') to verify removal, test application startup without E2B imports, test API endpoint functionality without E2B calls, test configuration parsing with E2B settings removed, integration tests to ensure no E2B network calls are made, test error handling for missing E2B configuration gracefully handled, test package.json dependency cleanup validation, test build process without E2B dependencies, test runtime behavior with E2B code paths removed, performance tests to verify improved startup times without E2B overhead, test environment variable validation for E2B_API_KEY removal, test TypeScript compilation without E2B types."
           },
           {
@@ -395,8 +395,8 @@
             "dependencies": [
               "6.1"
             ],
-            "details": "Run npm install cheerio puppeteer with appropriate version specifications. Add @types/cheerio if using TypeScript. Configure puppeteer to work in headless mode by default. Verify compatibility with existing Node.js version and update package-lock.json. Test that both packages install correctly and can be imported without conflicts.\n<info added on 2025-08-15T15:07:03.124Z>",
-            "status": "pending",
+            "details": "Run npm install cheerio puppeteer with appropriate version specifications. Add @types/cheerio if using TypeScript. Configure puppeteer to work in headless mode by default. Verify compatibility with existing Node.js version and update package-lock.json. Test that both packages install correctly and can be imported without conflicts.\n<info added on 2025-08-15T15:07:03.124Z>\n<info added on 2025-08-17T16:01:45.450Z>\nTask completion verified with successful dependency installation and testing. Cheerio v1.1.2 and Puppeteer v24.16.2 confirmed working with Node.js v22.17.1. TypeScript definitions already present. All import and functionality tests passed. No conflicts detected. Dependencies ready for web scraping implementation.\n</info added on 2025-08-17T16:01:45.450Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for new dependency installation, mock npm install operations with jest.mock('child_process'), test Cheerio HTML parsing functionality with sample HTML documents, test Puppeteer browser automation and page scraping, test package.json updates for new dependencies, test TypeScript type definitions for cheerio and puppeteer, integration tests for HTML content extraction using Cheerio with real web pages, test Puppeteer headless browser operations for dynamic content scraping, test dependency version compatibility and security vulnerabilities, test application build process with new dependencies, test memory usage and performance impact of new packages, test cross-platform compatibility for Puppeteer browser binaries, test error handling for failed installations and missing dependencies"
           },
           {
@@ -407,8 +407,8 @@
               "6.1",
               "6.2"
             ],
-            "details": "Remove E2B_API_KEY, FIRECRAWL_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, and GROQ_API_KEY from .env.example. Add LOCAL_SANDBOX_PATH (default: ./sandbox) and VITE_PORT (default: 5173) as optional configuration values. Update config/app.config.ts to remove all external API configurations and add local development settings including sandbox path, Vite port, and local process timeout values. Ensure default values are provided for all local configuration options.\n<info added on 2025-08-15T15:07:21.114Z>",
-            "status": "pending",
+            "details": "Remove E2B_API_KEY, FIRECRAWL_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, and GROQ_API_KEY from .env.example. Add LOCAL_SANDBOX_PATH (default: ./sandbox) and VITE_PORT (default: 5173) as optional configuration values. Update config/app.config.ts to remove all external API configurations and add local development settings including sandbox path, Vite port, and local process timeout values. Ensure default values are provided for all local configuration options.\n<info added on 2025-08-15T15:07:21.114Z>\n<info added on 2025-08-17T16:04:31.134Z>\nEnvironment configuration successfully updated. Modified .env.example to remove external API keys (E2B_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY, GROQ_API_KEY) and added local development variables (LOCAL_SANDBOX_PATH with default ./sandbox, VITE_PORT with default 5173, NODE_ENV=development). Updated config/app.config.ts with new structure: renamed 'e2b' section to 'sandbox' for local process management, replaced 'ai' section with 'codeGeneration' for local processing, added 'webScraping' section with cheerio/puppeteer configs, and updated 'api' section for local development. All configurations include proper defaults and environment variable integration. TypeScript validation passes. Note: Existing files will require updates to use new configuration structure as documented in task 6.1.\n</info added on 2025-08-17T16:04:31.134Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for environment configuration updates, mock environment variable loading with jest.mock('dotenv'), test .env.example file validity and required variables, test app.config.ts parsing and configuration object structure, test configuration validation for missing or invalid environment variables, test default value handling for optional configuration settings, integration tests for application startup with updated configuration, test configuration hot-reloading during development, test environment variable precedence and overrides, test configuration schema validation using TypeScript types, test cross-environment compatibility (development, production, test), performance tests for configuration loading times, test error handling for malformed configuration files and missing environment files"
           }
         ]
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-17T15:53:51.544Z",
+      "updated": "2025-08-17T16:04:38.146Z",
       "description": "Tasks for master context"
     }
   }

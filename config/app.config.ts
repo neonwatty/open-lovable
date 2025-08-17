@@ -2,18 +2,21 @@
 // This file contains all configurable settings for the application
 
 export const appConfig = {
-  // E2B Sandbox Configuration
-  e2b: {
-    // Sandbox timeout in minutes
+  // Local Sandbox Configuration
+  sandbox: {
+    // Local sandbox directory path
+    path: process.env.LOCAL_SANDBOX_PATH || './sandbox',
+    
+    // Process timeout in minutes
     timeoutMinutes: 15,
     
-    // Convert to milliseconds for E2B API
+    // Convert to milliseconds for process management
     get timeoutMs() {
       return this.timeoutMinutes * 60 * 1000;
     },
     
     // Vite development server port
-    vitePort: 5173,
+    vitePort: parseInt(process.env.VITE_PORT || '5173'),
     
     // Time to wait for Vite to be ready (in milliseconds)
     viteStartupDelay: 7000,
@@ -21,37 +24,35 @@ export const appConfig = {
     // Time to wait for CSS rebuild (in milliseconds)
     cssRebuildDelay: 2000,
     
-    // Default sandbox template (if using templates)
-    defaultTemplate: undefined, // or specify a template ID
+    // Local process timeout for operations (in milliseconds)
+    processTimeout: 30000,
   },
   
-  // AI Model Configuration
-  ai: {
-    // Default AI model
-    defaultModel: 'moonshotai/kimi-k2-instruct',
+  // Local Code Generation Configuration
+  codeGeneration: {
+    // Default code generation mode
+    defaultMode: 'local',
     
-    // Available models
-    availableModels: [
-      'openai/gpt-5',
-      'moonshotai/kimi-k2-instruct',
-      'anthropic/claude-sonnet-4-20250514'
+    // Local code validation enabled
+    enableValidation: true,
+    
+    // Code analysis timeout (in milliseconds)
+    analysisTimeout: 10000,
+    
+    // Max file size for code processing (bytes)
+    maxFileSize: 1024 * 1024, // 1MB
+    
+    // Supported programming languages
+    supportedLanguages: [
+      'javascript',
+      'typescript',
+      'jsx',
+      'tsx',
+      'css',
+      'scss',
+      'html',
+      'json'
     ],
-    
-    // Model display names
-    modelDisplayNames: {
-      'openai/gpt-5': 'GPT-5',
-      'moonshotai/kimi-k2-instruct': 'Kimi K2 Instruct',
-      'anthropic/claude-sonnet-4-20250514': 'Sonnet 4'
-    },
-    
-    // Temperature settings for non-reasoning models
-    defaultTemperature: 0.7,
-    
-    // Max tokens for code generation
-    maxTokens: 8000,
-    
-    // Max tokens for truncation recovery
-    truncationRecoveryMaxTokens: 4000,
   },
   
   // Code Application Configuration
@@ -139,14 +140,49 @@ export const appConfig = {
     ],
   },
   
-  // API Endpoints Configuration (for external services)
+  // Web Scraping Configuration (using local tools)
+  webScraping: {
+    // Default user agent for requests
+    userAgent: 'Open-Lovable-Bot/1.0',
+    
+    // Request timeout for web scraping (milliseconds)
+    timeout: 15000,
+    
+    // Maximum pages to scrape per request
+    maxPages: 5,
+    
+    // Puppeteer configuration
+    puppeteer: {
+      headless: true,
+      defaultViewport: {
+        width: 1280,
+        height: 720,
+      },
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    },
+    
+    // Cheerio configuration
+    cheerio: {
+      // Parse HTML with XML mode disabled
+      xmlMode: false,
+      decodeEntities: true,
+    },
+  },
+  
+  // Local API Configuration
   api: {
-    // Retry configuration
-    maxRetries: 3,
-    retryDelay: 1000, // milliseconds
+    // Local development server settings
+    baseUrl: 'http://localhost:3000',
     
     // Request timeout (milliseconds)
     requestTimeout: 30000,
+    
+    // Retry configuration for local requests
+    maxRetries: 2,
+    retryDelay: 1000, // milliseconds
+    
+    // Enable request logging in development
+    enableLogging: process.env.NODE_ENV === 'development',
   }
 };
 
