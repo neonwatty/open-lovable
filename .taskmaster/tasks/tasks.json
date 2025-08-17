@@ -215,7 +215,7 @@
         "testStrategy": "Test prompt formatting produces Claude Code-compatible markdown. Verify response parsing extracts code blocks and file paths correctly. Confirm streaming interface works without AI provider APIs.",
         "priority": "high",
         "dependencies": [],
-        "status": "in-progress",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
@@ -308,15 +308,15 @@
           1,
           2
         ],
-        "status": "pending",
+        "status": "done",
         "subtasks": [
           {
             "id": 1,
             "title": "Update kill-sandbox endpoint for local Vite process termination",
             "description": "Modify /api/kill-sandbox to terminate local Vite process using process.kill() with proper signal handling",
             "dependencies": [],
-            "details": "Replace E2B sandbox termination logic with local process management. Store Vite process PID when started and use it to terminate the process gracefully with SIGTERM, falling back to SIGKILL if needed. Implement error handling for cases where process is already terminated or PID is invalid. Clean up any orphaned child processes.\n<info added on 2025-08-15T15:04:59.652Z>",
-            "status": "pending",
+            "details": "Replace E2B sandbox termination logic with local process management. Store Vite process PID when started and use it to terminate the process gracefully with SIGTERM, falling back to SIGKILL if needed. Implement error handling for cases where process is already terminated or PID is invalid. Clean up any orphaned child processes.\n<info added on 2025-08-15T15:04:59.652Z>\n<info added on 2025-08-17T12:23:17.549Z>\nImplementation completed. Successfully modified the kill-sandbox endpoint to handle local Vite process termination using PID file tracking at /tmp/vite-process.pid. Implemented graceful shutdown sequence with SIGTERM followed by SIGKILL fallback after 2 seconds. Added cleanup for global process references and temporary files. Included pkill fallback mechanism for orphaned processes. Maintained backwards compatibility with E2B sandbox cleanup. Resolved all ESLint warnings for code quality compliance.\n</info added on 2025-08-17T12:23:17.549Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for sandbox management API transformations, mock filesystem operations using jest.mock('fs/promises') for local directory creation and cleanup, test process management with jest.mock('child_process') for development server spawning and termination, test port management and allocation with network socket mocking, test sandbox isolation and cleanup procedures, test error handling for failed sandbox creation and recovery mechanisms, integration tests with real local development servers (Vite, webpack-dev-server), test concurrent sandbox creation and management, test sandbox state persistence and recovery after crashes, test resource usage monitoring and limits, performance tests for sandbox startup and shutdown times, test cross-platform compatibility for sandbox paths and process management"
           },
           {
@@ -326,8 +326,8 @@
             "dependencies": [
               "5.1"
             ],
-            "details": "Implement restart logic that first calls the kill-sandbox functionality to ensure clean termination. Add delay to ensure port is released before restart. Start new Vite process using child_process.spawn with proper environment variables and working directory. Store new process PID for future management. Implement health check to verify server is running after restart.\n<info added on 2025-08-15T15:05:20.951Z>",
-            "status": "pending",
+            "details": "Implement restart logic that first calls the kill-sandbox functionality to ensure clean termination. Add delay to ensure port is released before restart. Start new Vite process using child_process.spawn with proper environment variables and working directory. Store new process PID for future management. Implement health check to verify server is running after restart.\n<info added on 2025-08-15T15:05:20.951Z>\n<info added on 2025-08-17T12:29:02.214Z>\nImplementation completed successfully. Migrated restart-vite endpoint from E2B to local process management with kill-sandbox integration, port management, health checking, and comprehensive error handling. Key features include graceful shutdown with SIGTERM/SIGKILL timeout, 5-second port release waiting, TCP-based health verification, stdout/stderr monitoring, PID storage in /tmp/vite-process.pid and global.viteProcess, and configurable SANDBOX_DIR support. Endpoint now provides complete local Vite server lifecycle management.\n</info added on 2025-08-17T12:29:02.214Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for Vite server restart mechanisms, mock child_process methods (spawn, exec, kill) using jest.mock('child_process'), test graceful server shutdown with SIGTERM followed by SIGKILL timeout, test process cleanup and PID tracking, test port availability checking before restart, test restart sequence timing and race conditions, test error handling for failed restarts and zombie processes, integration tests with real Vite server lifecycle, test concurrent restart requests and request queuing, test server health checking after restart, test configuration file reloading during restart, test memory cleanup and resource deallocation, performance tests for restart speed optimization, test cross-platform signal handling differences (Windows vs Unix)"
           },
           {
@@ -335,8 +335,8 @@
             "title": "Update sandbox-status endpoint for local process monitoring",
             "description": "Modify /api/sandbox-status to check local Vite process health and port availability",
             "dependencies": [],
-            "details": "Check if stored Vite process PID is still running using process.kill(pid, 0). Verify port 5173 (or configured port) is accessible using net module or HTTP request. Return structured status including process state, port availability, memory usage, and uptime. Implement fallback checks for cases where PID is lost but process is still running.\n<info added on 2025-08-15T15:05:44.868Z>",
-            "status": "pending",
+            "details": "Check if stored Vite process PID is still running using process.kill(pid, 0). Verify port 5173 (or configured port) is accessible using net module or HTTP request. Return structured status including process state, port availability, memory usage, and uptime. Implement fallback checks for cases where PID is lost but process is still running.\n<info added on 2025-08-15T15:05:44.868Z>\n<info added on 2025-08-17T12:31:44.706Z>\nImplementation completed successfully. The sandbox-status endpoint has been fully migrated from E2B sandbox monitoring to comprehensive local process monitoring with all specified features including process health verification using process.kill(pid, 0), port accessibility testing via TCP socket connections, structured status reporting with memory/CPU/uptime metrics, fallback process discovery using lsof/netstat commands, multi-source PID tracking from both file storage and global references, automatic PID recovery for orphaned processes, and legacy API compatibility. The endpoint now provides complete local Vite server monitoring with process health, network accessibility, and system resource utilization as required.\n</info added on 2025-08-17T12:31:44.706Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for local process monitoring, mock system process checking with jest.mock('child_process') for ps/tasklist commands, test port availability checking using network socket connections, test process health verification by PID validation, test HTTP endpoint health checks for Vite server responsiveness, test status reporting accuracy and response timing, integration tests with real Vite server instances, test status checking during server startup and shutdown phases, test error handling for unreachable or crashed processes, test concurrent status requests and caching mechanisms, test cross-platform process monitoring (Windows tasklist vs Unix ps), performance tests for status check latency optimization, test network timeout handling for unresponsive servers"
           },
           {
@@ -344,8 +344,8 @@
             "title": "Modify run-command endpoint for secure local execution",
             "description": "Update /api/run-command to execute commands locally with proper sandboxing and security",
             "dependencies": [],
-            "details": "Replace E2B command execution with child_process.spawn for local execution. Implement command whitelist to prevent dangerous operations. Set up proper working directory context for commands. Add timeout mechanism to prevent hanging processes. Capture and stream stdout/stderr properly. Implement environment variable isolation to prevent sensitive data exposure.\n<info added on 2025-08-15T15:06:03.802Z>",
-            "status": "pending",
+            "details": "Replace E2B command execution with child_process.spawn for local execution. Implement command whitelist to prevent dangerous operations. Set up proper working directory context for commands. Add timeout mechanism to prevent hanging processes. Capture and stream stdout/stderr properly. Implement environment variable isolation to prevent sensitive data exposure.\n<info added on 2025-08-15T15:06:03.802Z>\n<info added on 2025-08-17T12:36:48.477Z>\n**IMPLEMENTATION COMPLETED SUCCESSFULLY**\n\nFull migration from E2B to secure local command execution achieved with comprehensive security framework:\n\n**Security Implementation:**\n- Multi-layer command validation (whitelist + pattern blocking + subcommand validation)\n- Complete environment isolation with minimal safe variables only\n- Shell injection prevention through argument array parsing and shell: false\n- Dangerous pattern detection blocking redirection, piping, command chaining, globbing\n- Specialized validation for package managers and git operations\n\n**Process Management:**\n- Promise-based async execution with proper error handling\n- 30-second timeout with graceful SIGTERM → SIGKILL escalation\n- Working directory validation and secure sandbox path configuration\n- Comprehensive stdout/stderr capture with structured response format\n- Process cleanup and orphan prevention mechanisms\n\n**Performance & Monitoring:**\n- Execution duration tracking and detailed result reporting\n- Comprehensive logging for security audit trails\n- Cross-platform compatibility foundation\n- Resource leak prevention through timeout and cleanup controls\n\n**Endpoint Security Hardening:**\n- No shell execution capabilities\n- Input sanitization and command parsing validation\n- Minimal attack surface through restricted command allowlist\n- Environment variable isolation preventing sensitive data exposure\n\nThe run-command endpoint now provides enterprise-grade security for local development workflows while maintaining full functionality for legitimate development operations.\n</info added on 2025-08-17T12:36:48.477Z>",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for secure command execution, mock child_process.exec and child_process.spawn with jest.mock('child_process'), test command sanitization and validation to prevent injection attacks, test command execution with proper working directory and environment isolation, test command whitelisting and blacklisting for security, test timeout handling and process termination, test output capture and streaming (stdout/stderr), integration tests with real command execution in controlled environment, test concurrent command execution and resource management, test error handling for failed commands and permission issues, test command execution logging and audit trails, test cross-platform command compatibility (cmd vs bash), performance tests for command execution overhead, security tests against shell injection and privilege escalation"
           },
           {
@@ -359,7 +359,7 @@
               "5.4"
             ],
             "details": "Implement process registry to track all spawned child processes. Add graceful shutdown handler for SIGTERM/SIGINT to clean up all processes on app exit. Create periodic health check to identify and clean up orphaned processes. Implement resource limits (CPU, memory) for spawned processes. Add logging for all process lifecycle events for debugging. Create cleanup utility functions that can be reused across endpoints.\n<info added on 2025-08-15T15:06:22.659Z>",
-            "status": "pending",
+            "status": "done",
             "testStrategy": "Unit tests with Jest for process cleanup mechanisms, mock process management using jest.mock('child_process') and test zombie process prevention, test resource leak detection with memory monitoring, test graceful shutdown procedures with SIGTERM/SIGKILL handling, test orphaned process cleanup and PID tracking, test file descriptor cleanup and handle management, integration tests with real process lifecycle management, test concurrent cleanup operations and race condition prevention, test timeout-based cleanup for unresponsive processes, test cross-platform cleanup differences (Windows vs Unix), test system resource monitoring (CPU, memory, file handles), performance tests for cleanup efficiency and resource recovery times, test error handling for cleanup failures and partial cleanup scenarios"
           }
         ]
@@ -550,7 +550,7 @@
     ],
     "metadata": {
       "created": "2025-08-14T21:50:15.667Z",
-      "updated": "2025-08-16T13:30:21.221Z",
+      "updated": "2025-08-17T15:53:51.544Z",
       "description": "Tasks for master context"
     }
   }
