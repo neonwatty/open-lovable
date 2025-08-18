@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import net from 'net';
 import { processCleanupManager } from '../../../lib/process-cleanup-manager';
+import { defaultPortManager } from '../../../lib/port-manager';
 
 declare global {
   var activeSandbox: any;
@@ -124,13 +125,43 @@ export async function POST() {
     const processKilled = await killSandboxProcesses();
     console.log(`[restart-vite] Process termination: ${processKilled ? 'successful' : 'no processes found'}`);
     
-    // Step 2: Wait for port to be released
-    const vitePort = 5173;
-    console.log('[restart-vite] Waiting for port to be released...');
+    // Step 2: Get current port info or allocate new one
+    let vitePort = 5173; // Default fallback
+    let sandboxId = 'default-sandbox';
+    
+    // Try to get existing sandbox info
+    if (global.activeSandbox && global.activeSandbox.id) {
+      sandboxId = global.activeSandbox.id;
+      const reservation = defaultPortManager.getReservation(sandboxId);
+      if (reservation) {
+        vitePort = reservation.port;
+        console.log(`[restart-vite] Using existing port reservation: ${vitePort}`);
+      } else {
+        // Re-reserve port for existing sandbox
+        try {
+          const newReservation = await defaultPortManager.reservePort(sandboxId);
+          vitePort = newReservation.port;
+          console.log(`[restart-vite] Re-reserved port: ${vitePort} for sandbox ${sandboxId}`);
+        } catch (error) {
+          console.warn(`[restart-vite] Failed to reserve port, using default: ${error}`);
+        }
+      }
+    } else {
+      // Create new sandbox entry for port management
+      try {
+        const newReservation = await defaultPortManager.reservePort(sandboxId);
+        vitePort = newReservation.port;
+        console.log(`[restart-vite] Reserved new port: ${vitePort} for new sandbox`);
+      } catch (error) {
+        console.warn(`[restart-vite] Failed to reserve new port, using default: ${error}`);
+      }
+    }
+    
+    console.log(`[restart-vite] Waiting for port ${vitePort} to be released...`);
     const portReleased = await waitForPort(vitePort, 5000);
     
     if (!portReleased) {
-      console.warn('[restart-vite] Port may still be in use, proceeding anyway');
+      console.warn(`[restart-vite] Port ${vitePort} may still be in use, proceeding anyway`);
     }
     
     // Step 3: Clear error tracking file
@@ -213,12 +244,26 @@ export async function POST() {
       global.viteProcess = null;
     });
     
-    // Step 7: Wait for server to start and perform health check
+    // Step 7: Activate port in PortManager
+    try {
+      await defaultPortManager.activatePort(sandboxId);
+      console.log(`[restart-vite] Port ${vitePort} activated in PortManager`);
+    } catch (error) {
+      console.warn(`[restart-vite] Failed to activate port in PortManager: ${error}`);
+    }
+    
+    // Step 8: Wait for server to start and perform health check
     console.log('[restart-vite] Waiting for server to be ready...');
     await new Promise(resolve => setTimeout(resolve, 3000));
     
     const isHealthy = await healthCheck(vitePort);
     console.log(`[restart-vite] Health check: ${isHealthy ? 'passed' : 'failed'}`);
+    
+    // Update global sandbox state with port info
+    if (global.activeSandbox) {
+      global.activeSandbox.port = vitePort;
+      global.activeSandbox.url = `http://localhost:${vitePort}`;
+    }
     
     return NextResponse.json({
       success: true,

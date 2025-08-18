@@ -9,6 +9,7 @@ import {
   checkClaudeCodeAvailability 
 } from '../../lib/claude-code-integration';
 
+
 describe('ClaudeCodeIntegration', () => {
   describe('ClaudeCodeTextStream', () => {
     it('should split response into streamable parts', async () => {

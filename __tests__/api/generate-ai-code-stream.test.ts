@@ -151,7 +151,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
       const response = await POST(request);
       expect(response.status).toBe(400);
 
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.error).toContain('Missing required fields');
     });
 
@@ -171,7 +171,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
       const response = await POST(request);
       expect(response.status).toBe(400);
 
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.error).toContain('Invalid model');
     });
   });
@@ -525,7 +525,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
       const response = await POST(request);
       expect(response.status).toBe(500);
 
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.error).toBeDefined();
     });
 
@@ -553,7 +553,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
       const response = await POST(request);
       expect(response.status).toBe(404);
 
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.error).toContain('Sandbox not found');
     });
   });

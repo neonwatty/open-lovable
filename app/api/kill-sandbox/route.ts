@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
 import { processCleanupManager } from '../../../lib/process-cleanup-manager';
+import { defaultPortManager } from '../../../lib/port-manager';
 
 declare global {
   var activeSandbox: any;
@@ -100,14 +101,26 @@ export async function POST() {
       console.error('[kill-sandbox] Error killing local processes:', e);
     }
     
-    // Kill existing E2B sandbox if any (for backwards compatibility)
+    // Release port reservations and cleanup sandbox
     if (global.activeSandbox) {
       try {
-        await global.activeSandbox.close();
+        // Release port if sandbox has one
+        if (global.activeSandbox.id) {
+          const released = await defaultPortManager.releasePort(global.activeSandbox.id);
+          if (released) {
+            console.log(`[kill-sandbox] Port released for sandbox ${global.activeSandbox.id}`);
+          }
+        }
+        
+        // Kill E2B sandbox if it exists (backwards compatibility)
+        if (typeof global.activeSandbox.close === 'function') {
+          await global.activeSandbox.close();
+          console.log('[kill-sandbox] E2B Sandbox closed successfully');
+        }
+        
         sandboxKilled = true;
-        console.log('[kill-sandbox] E2B Sandbox closed successfully');
       } catch (e) {
-        console.error('[kill-sandbox] Failed to close E2B sandbox:', e);
+        console.error('[kill-sandbox] Failed to cleanup sandbox:', e);
       }
       global.activeSandbox = null;
       global.sandboxData = null;

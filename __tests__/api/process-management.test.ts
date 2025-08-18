@@ -42,7 +42,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await killSandbox();
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
       expect(data.message).toContain('cleaned up successfully');
     });
@@ -55,7 +55,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await killSandbox();
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
     });
 
@@ -102,7 +102,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await restartVite();
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
       expect(data.data.pid).toBe(54321);
       expect(data.data.port).toBe(5173);
@@ -120,7 +120,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await restartVite();
       
       expect(response.status).toBe(500);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(false);
       expect(data.error).toContain('Failed to start Vite process');
     });
@@ -178,7 +178,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await runCommand(request);
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
       expect(data.command).toBe('npm install');
     });
@@ -202,7 +202,7 @@ describe.skip('API Routes - Process Management', () => {
         const response = await runCommand(request);
         
         expect(response.status).toBe(403);
-        const data = await response.json();
+        const data = JSON.parse(await response.text());
         expect(data.success).toBe(false);
         expect(data.error).toContain('Command blocked');
       }
@@ -258,7 +258,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await runCommand(request);
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.exitCode).toBe(124); // Timeout exit code
     });
 
@@ -314,7 +314,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await sandboxStatus();
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
       expect(data.process).toBeDefined();
       expect(data.port).toBeDefined();
@@ -332,7 +332,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await sandboxStatus();
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
       expect(data.process).toBeNull();
       
@@ -343,7 +343,7 @@ describe.skip('API Routes - Process Management', () => {
       const response = await sandboxStatus();
       
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = JSON.parse(await response.text());
       expect(data.success).toBe(true);
     });
   });

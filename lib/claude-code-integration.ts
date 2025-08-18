@@ -48,7 +48,8 @@ export class ClaudeCodeTextStream {
 
   constructor(response: string, delay: number = 50) {
     this.response = response;
-    this.delay = delay;
+    // Use no delay in test environment for faster tests
+    this.delay = process.env.NODE_ENV === 'test' ? 0 : delay;
     this.handler = new AdvancedStreamHandler({
       enableParsing: true,
       enablePartialResponse: true
@@ -101,7 +102,9 @@ export class ClaudeCodeResult {
   public streamHandler: AdvancedStreamHandler;
   
   constructor(response: string, streamDelay: number = 50) {
-    this.textStream = new ClaudeCodeTextStream(response, streamDelay);
+    // Use no delay in test environment for faster tests
+    const testDelay = process.env.NODE_ENV === 'test' ? 0 : streamDelay;
+    this.textStream = new ClaudeCodeTextStream(response, testDelay);
     this.streamHandler = this.textStream.getHandler();
   }
 

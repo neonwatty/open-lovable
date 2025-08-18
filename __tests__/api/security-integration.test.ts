@@ -45,7 +45,7 @@ function createTestRequest(url: string, options: any, bodyData?: any) {
 
 // Helper function to properly parse response JSON in test environment
 async function parseResponseJson(response: NextResponse) {
-  const rawData = await response.json();
+  const rawData = JSON.parse(await response.text());
   return typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 }
 
