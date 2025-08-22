@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { SandboxState } from '@/types/sandbox';
 import { selectFilesForEdit, getFileContents, formatFilesForAI } from '@/lib/context-selector';
 import { executeSearchPlan, formatSearchResultsForAI, selectTargetFile } from '@/lib/file-search-executor';
 import { FileManifest } from '@/types/file-manifest';
@@ -61,7 +60,6 @@ function analyzeUserPreferences(messages: ConversationMessage[]): {
 }
 
 declare global {
-  var sandboxState: SandboxState;
   var conversationState: ConversationState | null;
 }
 

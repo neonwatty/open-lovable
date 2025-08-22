@@ -72,8 +72,8 @@ export const appConfig = {
   
   // UI Configuration
   ui: {
-    // Show/hide certain UI elements
-    showModelSelector: true,
+    // Show/hide certain UI elements - model selector removed for Claude Code-only operation
+    showModelSelector: false,
     showStatusIndicator: true,
     
     // Animation durations (milliseconds)

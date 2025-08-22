@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Sandbox } from '@e2b/code-interpreter';
 import { dirname } from 'path';
-import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
 import { updateCacheFile } from '@/lib/local-file-cache';
 import { 
@@ -16,9 +15,6 @@ import {
 
 declare global {
   var conversationState: ConversationState | null;
-  var activeSandbox: any;
-  var existingFiles: Set<string>;
-  var sandboxState: SandboxState;
 }
 
 interface ParsedResponse {

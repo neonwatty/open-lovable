@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import type { SandboxState } from '@/types/sandbox';
 import type { ConversationState } from '@/types/conversation';
 import { updateCacheFile } from '@/lib/local-file-cache';
 
@@ -127,11 +126,6 @@ function parseAIResponse(response: string): ParsedResponse {
   return sections;
 }
 
-declare global {
-  var activeSandbox: any;
-  var existingFiles: Set<string>;
-  var sandboxState: SandboxState;
-}
 
 export async function POST(request: NextRequest) {
   try {

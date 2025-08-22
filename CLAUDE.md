@@ -25,9 +25,16 @@ npm run lint
 npm run test:all
 
 # Run individual test suites
-npm run test:integration  # E2B integration tests
-npm run test:api         # API endpoint tests  
-npm run test:code        # Code execution tests
+npm run test:unit        # Unit tests for components, lib, and app
+npm run test:integration # E2B integration tests
+npm run test:e2e         # Playwright end-to-end tests
+npm run test:e2e:ui      # Playwright tests with UI
+npm run test:sandbox     # Specific sandbox manager tests
+
+# Additional test commands
+npm run test:watch       # Run tests in watch mode
+npm run test:coverage    # Run tests with coverage report
+npm run test:debug       # Run tests with verbose output
 ```
 
 ## Architecture
@@ -64,9 +71,11 @@ npm run test:code        # Code execution tests
 ### Configuration (config/app.config.ts)
 - E2B sandbox timeout: 15 minutes
 - Vite dev server port: 5173
-- Default AI model: moonshotai/kimi-k2-instruct
+- Default AI model: claude-code
 - Package installation uses --legacy-peer-deps flag
 - Auto-restart Vite after package installation
+- Max file size for processing: 1MB
+- Code analysis timeout: 10 seconds
 
 ## Environment Variables
 
@@ -84,6 +93,18 @@ Required in `.env.local`:
 - Strict mode enabled
 - Path alias: `@/*` maps to root directory
 
-## Task Master AI Instructions
-**Import Task Master's development workflow commands and guidelines, treat as if import is in the main CLAUDE.md file.**
-@./.taskmaster/CLAUDE.md
+## Testing Framework
+
+### Jest Configuration
+- Test environment: jsdom
+- Single worker for stability
+- 30-second timeout for integration tests
+- Coverage includes lib/, app/, and components/ directories
+- Test patterns: `**/__tests__/**/*.(test|spec).(js|jsx|ts|tsx)`
+
+### Playwright Configuration
+- E2E tests in `/e2e` directory
+- Base URL: http://localhost:3000
+- Supports Chromium, Firefox, and WebKit
+- Auto-starts dev server before tests
+

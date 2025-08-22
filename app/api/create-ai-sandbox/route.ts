@@ -8,13 +8,6 @@ import { defaultSandboxManager } from '@/lib/sandbox-manager';
 import { processCleanupManager } from '@/lib/process-cleanup-manager';
 
 // Store active sandbox globally
-declare global {
-  var activeSandbox: any;
-  var sandboxData: any;
-  var existingFiles: Set<string>;
-  var sandboxState: any;
-  var viteProcess: any;
-}
 
 export async function POST() {
   let sandboxInfo: any = null;

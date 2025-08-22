@@ -1,0 +1,11 @@
+{
+  "database": {
+    "path": "./.tfq/queue.db"
+  },
+  "defaults": {
+    "autoAdd": true,
+    "parallel": 4
+  },
+  "language": "javascript",
+  "framework": "jest"
+}
