@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import SandboxStatusBadge from '../../components/SandboxStatusBadge';
 
@@ -35,10 +35,17 @@ describe('SandboxStatusBadge', () => {
       }),
     });
 
-    render(<SandboxStatusBadge />);
+    await act(async () => {
+      render(<SandboxStatusBadge />);
+    });
 
     // Should show checking status initially
     expect(screen.getByText('Checking...')).toBeInTheDocument();
+    
+    // Wait for the async fetch to complete
+    await waitFor(() => {
+      expect(screen.getByText('Checking...')).toBeInTheDocument();
+    });
   });
 
   it('displays healthy status when sandbox is running', async () => {
@@ -50,6 +57,7 @@ describe('SandboxStatusBadge', () => {
         active: true,
         healthy: true,
         status: {
+          process: { pid: 12345, isRunning: true, memoryUsage: 52428800 },
           port: { port: 5173, accessible: true, responseTime: 50 },
           url: 'http://localhost:5173',
           connectionHealth: 'healthy',
@@ -58,11 +66,14 @@ describe('SandboxStatusBadge', () => {
       }),
     });
 
-    render(<SandboxStatusBadge />);
+    await act(async () => {
+      render(<SandboxStatusBadge />);
+    });
 
     await waitFor(() => {
-      expect(screen.getByText('Port 5173')).toBeInTheDocument();
+      expect(screen.getByText('🟢 Port 5173')).toBeInTheDocument();
       expect(screen.getByText('(50ms)')).toBeInTheDocument();
+      expect(screen.getByText('50MB')).toBeInTheDocument();
     });
   });
 
@@ -70,7 +81,9 @@ describe('SandboxStatusBadge', () => {
     // Mock the fetch to fail
     (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-    render(<SandboxStatusBadge />);
+    await act(async () => {
+      render(<SandboxStatusBadge />);
+    });
 
     await waitFor(() => {
       expect(screen.getByText('Error')).toBeInTheDocument();
@@ -93,10 +106,12 @@ describe('SandboxStatusBadge', () => {
       }),
     });
 
-    render(<SandboxStatusBadge />);
+    await act(async () => {
+      render(<SandboxStatusBadge />);
+    });
 
     await waitFor(() => {
-      expect(screen.getByText('Offline')).toBeInTheDocument();
+      expect(screen.getByText('🔴 Offline')).toBeInTheDocument();
     });
   });
 
@@ -109,6 +124,7 @@ describe('SandboxStatusBadge', () => {
         active: true,
         healthy: true,
         status: {
+          process: { pid: 12345, isRunning: true },
           port: { port: 5173, accessible: true },
           url: 'http://localhost:5173',
           connectionHealth: 'healthy',
@@ -124,17 +140,21 @@ describe('SandboxStatusBadge', () => {
       value: mockOpen,
     });
 
-    render(<SandboxStatusBadge />);
+    await act(async () => {
+      render(<SandboxStatusBadge />);
+    });
 
     await waitFor(() => {
-      const badge = screen.getByText('Port 5173').closest('div');
+      const badge = screen.getByText(/Port 5173/).closest('div');
       expect(badge).toBeInTheDocument();
     });
 
     // Click the badge
-    const badge = screen.getByText('Port 5173').closest('div');
+    const badge = screen.getByText(/Port 5173/).closest('div');
     if (badge) {
-      badge.click();
+      await act(async () => {
+        badge.click();
+      });
     }
 
     // Should open the URL
@@ -159,7 +179,9 @@ describe('SandboxStatusBadge', () => {
       }),
     });
 
-    render(<SandboxStatusBadge onStatusChange={mockOnStatusChange} />);
+    await act(async () => {
+      render(<SandboxStatusBadge onStatusChange={mockOnStatusChange} />);
+    });
 
     await waitFor(() => {
       expect(mockOnStatusChange).toHaveBeenCalledWith('healthy');

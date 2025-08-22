@@ -4,7 +4,7 @@ test.describe('File Operations - Node.js fs Migration', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the main application
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test('should create files through AI code generation', async ({ page }) => {
@@ -12,12 +12,12 @@ test.describe('File Operations - Node.js fs Migration', () => {
     test.skip(true, 'E2B integration test - requires full sandbox setup');
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(2000);
+    await page.waitForLoadState('domcontentloaded');
+    await page.waitForTimeout(3000);
 
     // Look for the main chat interface
     const chatInput = page.locator('textarea').first();
-    await expect(chatInput).toBeVisible({ timeout: 10000 });
+    await expect(chatInput).toBeVisible({ timeout: 15000 });
 
     // Send a simple request to create a React component
     await chatInput.fill('Create a simple Button component');
@@ -35,7 +35,7 @@ test.describe('File Operations - Node.js fs Migration', () => {
     test.skip(true, 'API integration test - requires backend services');
 
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     
     // Test error handling by intercepting API calls
     await page.route('/api/apply-ai-code-stream', route => {

@@ -350,10 +350,19 @@ export class CustomStreamHandler {
     
     if (this.controller) {
       try {
-        this.controller.close();
+        // Check if controller is still active before closing
+        // The controller has a desiredSize property that becomes null when closed
+        if ((this.controller as any).desiredSize !== null) {
+          this.controller.close();
+        }
       } catch (error) {
-        console.error('[CustomStreamHandler] Error closing stream:', error);
+        // Only log error if it's not about the controller already being closed
+        if (!error.message?.includes('Controller is already closed') && 
+            !error.message?.includes('Invalid state')) {
+          console.error('[CustomStreamHandler] Error closing stream:', error);
+        }
       }
+      this.controller = undefined;
     }
   }
 

@@ -8,6 +8,13 @@ interface SandboxStatusData {
   active: boolean;
   healthy: boolean;
   status: {
+    process?: {
+      pid: number;
+      isRunning: boolean;
+      memoryUsage?: number;
+      uptime?: number;
+      cpuUsage?: number;
+    } | null;
     port: {
       port: number;
       accessible: boolean;
@@ -108,10 +115,12 @@ export default function SandboxStatusBadge({
     if (!statusData) return 'Unknown';
     
     switch (overallStatus) {
-      case 'healthy': return `Port ${statusData.status.port.port}`;
+      case 'healthy': 
+        const processStatus = statusData.status.process?.isRunning ? '🟢' : '⚪';
+        return `${processStatus} Port ${statusData.status.port.port}`;
       case 'checking': return 'Checking...';
-      case 'unreachable': return 'Offline';
-      case 'error': return 'Error';
+      case 'unreachable': return '🔴 Offline';
+      case 'error': return '🔴 Error';
       default: return 'Unknown';
     }
   };
@@ -134,9 +143,14 @@ export default function SandboxStatusBadge({
       <span className="text-gray-300 font-medium">
         {getStatusText()}
       </span>
-      {statusData?.status.port.responseTime && (
+      {statusData?.status.port.responseTime && overallStatus === 'healthy' && (
         <span className="text-gray-500">
           ({statusData.status.port.responseTime}ms)
+        </span>
+      )}
+      {statusData?.status.process?.memoryUsage && overallStatus === 'healthy' && (
+        <span className="text-gray-500 text-xs ml-1">
+          {Math.round(statusData.status.process.memoryUsage / (1024 * 1024))}MB
         </span>
       )}
     </div>

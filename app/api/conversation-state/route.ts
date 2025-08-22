@@ -32,7 +32,25 @@ export async function GET() {
 // POST: Reset or update conversation state
 export async function POST(request: NextRequest) {
   try {
-    const { action, data } = await request.json();
+    // Parse JSON with error handling for empty or malformed requests
+    let requestBody;
+    try {
+      const text = await request.text();
+      if (!text.trim()) {
+        return NextResponse.json({
+          success: false,
+          error: 'Request body is empty'
+        }, { status: 400 });
+      }
+      requestBody = JSON.parse(text);
+    } catch (parseError) {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid JSON in request body'
+      }, { status: 400 });
+    }
+
+    const { action, data } = requestBody;
     
     switch (action) {
       case 'reset':

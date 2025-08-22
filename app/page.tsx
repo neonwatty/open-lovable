@@ -23,6 +23,7 @@ import {
 import { motion } from 'framer-motion';
 import CodeApplicationProgress, { type CodeApplicationState } from '@/components/CodeApplicationProgress';
 import SandboxStatusBadge from '@/components/SandboxStatusBadge';
+import SandboxStatusIndicator from '@/components/SandboxStatusIndicator';
 import { useSandboxStatus } from '@/hooks/useSandboxStatus';
 
 interface SandboxData {
@@ -3512,6 +3513,18 @@ Focus on the key sections and content, making it clean and modern.`;
               )}
             </div>
           </div>
+          
+          {/* Enhanced Status Indicator - Only show in preview mode */}
+          {activeTab === 'preview' && sandboxData && (
+            <div className="px-4 pb-2 border-b border-border">
+              <SandboxStatusIndicator 
+                showDetails={false}
+                autoRefresh={false} // Main hook handles refreshing
+                className="max-w-full"
+              />
+            </div>
+          )}
+          
           <div className="flex-1 relative overflow-hidden">
             {renderMainContent()}
           </div>
