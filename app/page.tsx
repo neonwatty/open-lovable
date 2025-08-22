@@ -22,6 +22,8 @@ import {
 } from '@/lib/icons';
 import { motion } from 'framer-motion';
 import CodeApplicationProgress, { type CodeApplicationState } from '@/components/CodeApplicationProgress';
+import SandboxStatusBadge from '@/components/SandboxStatusBadge';
+import { useSandboxStatus } from '@/hooks/useSandboxStatus';
 
 interface SandboxData {
   sandboxId: string;
@@ -46,11 +48,26 @@ function AISandboxContent() {
   const [sandboxData, setSandboxData] = useState<SandboxData | null>(null);
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState({ text: 'Not connected', active: false });
-  const [localhostStatus, setLocalhostStatus] = useState<{
-    connected: boolean;
-    loading: boolean;
-    lastChecked?: Date;
-  }>({ connected: false, loading: false });
+  
+  // Use the new sandbox status hook instead of local localhost status
+  const {
+    statusData: sandboxStatus,
+    overallStatus: sandboxHealthStatus,
+    refresh: refreshSandboxStatus
+  } = useSandboxStatus({
+    autoRefresh: true,
+    refreshInterval: 3000,
+    onStatusChange: (status, data) => {
+      // Update legacy status for compatibility
+      if (status === 'healthy' && data?.status.url) {
+        updateStatus('Connected', true);
+      } else if (status === 'checking') {
+        updateStatus('Checking connection...', false);
+      } else {
+        updateStatus('Not connected', false);
+      }
+    }
+  });
   const [structureContent, setStructureContent] = useState('No local development environment set up yet');
   const [promptInput, setPromptInput] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -204,16 +221,19 @@ function AISandboxContent() {
     }
   }, [showHomeScreen, homeUrlInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Check localhost connection periodically
+  // Check sandbox connection periodically
   useEffect(() => {
     // Initial check
-    checkLocalhostConnection();
+    refreshSandboxStatus();
     
-    // Set up periodic checking every 30 seconds
-    const interval = setInterval(checkLocalhostConnection, 30000);
+    // Set up periodic checking every 30 seconds - but the main hook already handles periodic polling
+    // This is just for manual periodic checking
+    const interval = setInterval(() => {
+      refreshSandboxStatus();
+    }, 30000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [refreshSandboxStatus]);
 
 
   useEffect(() => {
@@ -391,33 +411,27 @@ function AISandboxContent() {
     }
   };
 
-  const checkLocalhostConnection = async () => {
-    setLocalhostStatus(prev => ({ ...prev, loading: true }));
-    
-    try {
-      const localhostUrl = 'http://localhost:5173';
-      const response = await fetch(localhostUrl, {
-        method: 'HEAD',
-        mode: 'no-cors', // Bypass CORS for connection check
-        signal: AbortSignal.timeout(5000) // 5 second timeout
-      });
-      
-      setLocalhostStatus({
-        connected: true,
-        loading: false,
-        lastChecked: new Date()
-      });
-      
-      console.log('[localhost] Successfully connected to localhost:5173');
-    } catch (error) {
-      setLocalhostStatus({
-        connected: false,
-        loading: false,
-        lastChecked: new Date()
-      });
-      
-      console.log('[localhost] Cannot connect to localhost:5173:', error);
+  // Use the new sandbox status system instead of manual localhost checking
+  const checkSandboxConnection = () => {
+    refreshSandboxStatus();
+  };
+
+  // Helper function to get the current sandbox URL dynamically
+  const getSandboxUrl = (): string => {
+    // Use sandbox status URL if available, otherwise fall back to sandbox data, otherwise default
+    const dynamicUrl = sandboxStatus?.status.url || sandboxData?.url;
+    if (dynamicUrl) {
+      return dynamicUrl;
     }
+    
+    // If we have port info from sandbox status, construct URL
+    const port = sandboxStatus?.status.port?.port;
+    if (port && typeof port === 'number' && port > 0 && port < 65536) {
+      return `http://localhost:${port}`;
+    }
+    
+    // Final fallback to default port
+    return 'http://localhost:5173';
   };
 
   const createSandbox = async (fromHomeScreen = false) => {
@@ -491,8 +505,8 @@ function AISandboxContent() {
         
         setTimeout(() => {
           if (iframeRef.current) {
-            // Use localhost for local development
-            iframeRef.current.src = 'http://localhost:5173';
+            // Use dynamic sandbox URL for local development
+            iframeRef.current.src = getSandboxUrl();
           }
         }, 100);
       } else {
@@ -704,8 +718,8 @@ function AISandboxContent() {
             setTimeout(() => {
               // Force refresh the iframe to show new files
               if (iframeRef.current) {
-                const localUrl = 'http://localhost:5173';
-                iframeRef.current.src = `${localUrl}?t=${Date.now()}`;
+                const sandboxUrl = getSandboxUrl();
+                iframeRef.current.src = `${sandboxUrl}?t=${Date.now()}`;
               }
             }, 1000);
           }
@@ -834,8 +848,8 @@ function AISandboxContent() {
               console.log('[home] Refreshing iframe after code application...');
               
               // Method 1: Change src with timestamp  
-              const localUrl = 'http://localhost:5173';
-              const urlWithTimestamp = `${localUrl}?t=${Date.now()}&applied=true`;
+              const sandboxUrl = getSandboxUrl();
+              const urlWithTimestamp = `${sandboxUrl}?t=${Date.now()}&applied=true`;
               iframeRef.current.src = urlWithTimestamp;
               
               // Method 2: Force reload after a short delay
@@ -865,14 +879,14 @@ function AISandboxContent() {
             
             setTimeout(async () => {
             if (iframeRef.current) {
-              const localUrl = 'http://localhost:5173';
+              const sandboxUrl = getSandboxUrl();
               console.log('[applyGeneratedCode] Starting iframe refresh sequence...');
               console.log('[applyGeneratedCode] Current iframe src:', iframeRef.current.src);
-              console.log('[applyGeneratedCode] Localhost URL:', localUrl);
+              console.log('[applyGeneratedCode] Sandbox URL:', sandboxUrl);
               
               // Method 1: Try direct navigation first
               try {
-                const urlWithTimestamp = `${localUrl}?t=${Date.now()}&force=true`;
+                const urlWithTimestamp = `${sandboxUrl}?t=${Date.now()}&force=true`;
                 console.log('[applyGeneratedCode] Attempting direct navigation to:', urlWithTimestamp);
                 
                 // Remove any existing onload handler
@@ -918,7 +932,7 @@ function AISandboxContent() {
               iframeRef.current.remove();
               
               // Add new iframe
-              newIframe.src = `${localUrl}?t=${Date.now()}&recreated=true`;
+              newIframe.src = `${sandboxUrl}?t=${Date.now()}&recreated=true`;
               parent?.appendChild(newIframe);
               
               // Update ref
@@ -992,8 +1006,8 @@ function AISandboxContent() {
           // Refresh the iframe after a short delay
           setTimeout(() => {
             if (iframeRef.current) {
-              const localUrl = 'http://localhost:5173';
-              iframeRef.current.src = `${localUrl}?t=${Date.now()}`;
+              const sandboxUrl = getSandboxUrl();
+              iframeRef.current.src = `${sandboxUrl}?t=${Date.now()}`;
             }
           }, 2000);
         } else {
@@ -1472,7 +1486,8 @@ function AISandboxContent() {
       }
       
       // Show localhost connection loading state when server is not available
-      if (sandboxData?.url && !loading && !localhostStatus.connected && localhostStatus.lastChecked) {
+      if (sandboxData?.url && !loading && sandboxHealthStatus === 'unreachable' && sandboxStatus) {
+        const port = sandboxStatus.status.port.port || 5173;
         return (
           <div className="flex items-center justify-center h-full bg-gray-50">
             <div className="text-center">
@@ -1481,13 +1496,13 @@ function AISandboxContent() {
                 Waiting for Local Server
               </h3>
               <p className="text-gray-600 text-sm mb-4">
-                Please start your local development server at localhost:5173
+                Please start your local development server at localhost:{port}
               </p>
               <div className="text-xs text-gray-500 mb-3">
                 Run: <code className="bg-gray-200 px-2 py-1 rounded">npm run dev</code>
               </div>
               <button
-                onClick={checkLocalhostConnection}
+                onClick={checkSandboxConnection}
                 className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
               >
                 Check Connection
@@ -1497,9 +1512,10 @@ function AISandboxContent() {
         );
       }
 
-      // Show sandbox iframe only when not in any loading state and localhost is connected
-      if (sandboxData?.url && !loading && (localhostStatus.connected || !localhostStatus.lastChecked)) {
-        const localhostUrl = 'http://localhost:5173';
+      // Show sandbox iframe when sandbox is available (healthy or checking)
+      if (sandboxData?.url && !loading && (sandboxHealthStatus === 'healthy' || sandboxHealthStatus === 'checking')) {
+        const localhostUrl = sandboxStatus?.status.url || 'http://localhost:5173';
+        const port = sandboxStatus?.status.port.port || 5173;
         
         return (
           <div className="relative w-full h-full">
@@ -1511,29 +1527,20 @@ function AISandboxContent() {
               allow="clipboard-write"
               sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"
               onError={() => {
-                console.log('[iframe] Error loading localhost:5173');
-                setLocalhostStatus(prev => ({ ...prev, connected: false }));
-                addChatMessage('⚠️ Cannot connect to localhost:5173. Make sure your local development server is running.', 'error');
+                console.log(`[iframe] Error loading localhost:${port}`);
+                addChatMessage(`⚠️ Cannot connect to localhost:${port}. Make sure your local development server is running.`, 'error');
+                checkSandboxConnection();
               }}
               onLoad={() => {
-                console.log('[iframe] Successfully loaded localhost:5173');
-                setLocalhostStatus(prev => ({ ...prev, connected: true }));
+                console.log(`[iframe] Successfully loaded localhost:${port}`);
               }}
             />
-            {/* Connection status indicator */}
-            <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 shadow-lg">
-              <div className={`w-2 h-2 rounded-full ${
-                localhostStatus.loading ? 'bg-yellow-500 animate-pulse' :
-                localhostStatus.connected ? 'bg-green-500' : 'bg-red-500'
-              }`}></div>
-              <span className="text-sm text-gray-700">localhost:5173</span>
-              <button
-                onClick={checkLocalhostConnection}
-                className="text-xs text-blue-600 hover:text-blue-800 ml-1"
-                title="Check connection"
-              >
-                ↻
-              </button>
+            {/* New Status Indicator */}
+            <div className="absolute top-4 right-4">
+              <SandboxStatusBadge 
+                className="shadow-lg"
+                autoRefresh={false} // Let the main hook handle refreshing
+              />
             </div>
             {/* Refresh button */}
             <button
@@ -3475,6 +3482,13 @@ Focus on the key sections and content, making it clean and modern.`;
                     )}
                   </div>
                 </div>
+              )}
+              {/* Sandbox Status Indicator */}
+              {sandboxData && (
+                <SandboxStatusBadge
+                  autoRefresh={false} // Main hook handles refreshing
+                  className="ml-2"
+                />
               )}
               {sandboxData && !generationProgress.isGenerating && (
                 <>

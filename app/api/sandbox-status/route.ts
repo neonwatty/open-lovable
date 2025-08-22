@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { promises as fs } from 'fs';
-import net from 'net';
+import { createServer } from 'net';
 import { spawn } from 'child_process';
+import { defaultPortManager } from '@/lib/port-manager';
+import { processCleanupManager } from '@/lib/process-cleanup-manager';
 
 declare global {
   var activeSandbox: any;
@@ -32,6 +34,15 @@ interface SandboxStatus {
   filesTracked: string[];
   sandboxId?: string;
   url?: string;
+  portManagerStats?: {
+    totalPorts: number;
+    availablePorts: number;
+    activePorts: number;
+    reservedPorts: number;
+    portRange: string;
+  };
+  uptime?: number; // milliseconds since created
+  connectionHealth?: 'healthy' | 'unreachable' | 'checking';
 }
 
 async function checkProcessByPid(pid: number): Promise<ProcessInfo | null> {
@@ -105,33 +116,25 @@ async function checkProcessByPid(pid: number): Promise<ProcessInfo | null> {
 async function checkPortStatus(port: number): Promise<PortStatus> {
   const startTime = Date.now();
   
+  // Try to connect to the port to check if it's accessible
   return new Promise((resolve) => {
-    const socket = new net.Socket();
-    socket.setTimeout(3000);
+    const server = createServer();
     
-    socket.connect(port, 'localhost', () => {
-      const responseTime = Date.now() - startTime;
-      socket.destroy();
+    server.listen(port, () => {
+      // If we can listen on the port, it means the port is NOT in use
+      server.close();
+      resolve({
+        port,
+        accessible: false
+      });
+    });
+    
+    server.on('error', () => {
+      // If we can't listen on the port, it means something is using it (likely our Vite server)
       resolve({
         port,
         accessible: true,
-        responseTime
-      });
-    });
-    
-    socket.on('error', () => {
-      socket.destroy();
-      resolve({
-        port,
-        accessible: false
-      });
-    });
-    
-    socket.on('timeout', () => {
-      socket.destroy();
-      resolve({
-        port,
-        accessible: false
+        responseTime: Date.now() - startTime
       });
     });
   });
@@ -222,8 +225,9 @@ async function findViteProcessByPort(port: number): Promise<number | null> {
 
 export async function GET() {
   try {
-    const vitePort = 5173;
-    const workingDir = process.env.SANDBOX_DIR || '/tmp/sandbox-workspace';
+    const activeSandbox = global.activeSandbox;
+    const vitePort = activeSandbox?.port || 5173; // Use dynamic port from sandbox
+    const workingDir = activeSandbox?.path || process.env.SANDBOX_DIR || '/tmp/sandbox-workspace';
     
     // Step 1: Check stored PID from file
     let storedPid: number | null = null;
@@ -241,19 +245,29 @@ export async function GET() {
       globalPid = global.viteProcess.pid;
     }
     
-    // Step 3: Check process status using available PIDs
-    let processInfo: ProcessInfo | null = null;
-    
-    if (storedPid && !isNaN(storedPid)) {
-      processInfo = await checkProcessByPid(storedPid);
-    } else if (globalPid && !isNaN(globalPid)) {
-      processInfo = await checkProcessByPid(globalPid);
+    // Step 3: Check process cleanup manager for managed processes
+    const managedProcesses = processCleanupManager.getProcesses();
+    const viteProcess = managedProcesses.find((p: any) => p.type === 'vite');
+    let managedPid: number | null = null;
+    if (viteProcess) {
+      managedPid = viteProcess.pid || null;
     }
     
-    // Step 4: Check port status
+    // Step 4: Check process status using available PIDs (priority: managed > global > stored)
+    let processInfo: ProcessInfo | null = null;
+    
+    if (managedPid && !isNaN(managedPid)) {
+      processInfo = await checkProcessByPid(managedPid);
+    } else if (globalPid && !isNaN(globalPid)) {
+      processInfo = await checkProcessByPid(globalPid);
+    } else if (storedPid && !isNaN(storedPid)) {
+      processInfo = await checkProcessByPid(storedPid);
+    }
+    
+    // Step 5: Check port status
     const portStatus = await checkPortStatus(vitePort);
     
-    // Step 5: Fallback - if no PID but port is accessible, try to find process
+    // Step 6: Fallback - if no PID but port is accessible, try to find process
     if (!processInfo?.isRunning && portStatus.accessible) {
       const foundPid = await findViteProcessByPort(vitePort);
       if (foundPid) {
@@ -270,15 +284,43 @@ export async function GET() {
       }
     }
     
-    // Step 6: Build status response
+    // Step 7: Get port manager stats
+    const portStats = defaultPortManager.getStats();
+    
+    // Step 8: Calculate uptime if sandbox exists
+    let uptime: number | undefined = undefined;
+    if (activeSandbox?.created) {
+      uptime = Date.now() - activeSandbox.created.getTime();
+    }
+    
+    // Step 9: Determine connection health
+    let connectionHealth: 'healthy' | 'unreachable' | 'checking' = 'unreachable';
+    if (processInfo?.isRunning && portStatus.accessible) {
+      connectionHealth = 'healthy';
+    } else if (!processInfo?.isRunning) {
+      connectionHealth = 'unreachable';
+    } else {
+      connectionHealth = 'checking';
+    }
+    
+    // Step 10: Build status response
     const status: SandboxStatus = {
       process: processInfo,
       port: portStatus,
       workingDirectory: workingDir,
       lastHealthCheck: new Date().toISOString(),
       filesTracked: global.existingFiles ? Array.from(global.existingFiles) : [],
-      sandboxId: global.sandboxData?.sandboxId,
-      url: global.sandboxData?.url
+      sandboxId: activeSandbox?.id || global.sandboxData?.sandboxId,
+      url: activeSandbox?.url || global.sandboxData?.url,
+      portManagerStats: {
+        totalPorts: portStats.totalPorts,
+        availablePorts: portStats.availablePorts,
+        activePorts: portStats.activePorts,
+        reservedPorts: portStats.reservedPorts,
+        portRange: portStats.portRange,
+      },
+      uptime,
+      connectionHealth,
     };
     
     const isHealthy = (processInfo?.isRunning || false) && portStatus.accessible;
