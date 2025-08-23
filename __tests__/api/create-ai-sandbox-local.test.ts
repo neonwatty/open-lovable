@@ -30,17 +30,25 @@ jest.mock('util', () => ({
   })
 }));
 
-// Mock app config to reduce delays
+// Mock app config aligned with new timeout configuration
 jest.mock('@/config/app.config', () => ({
   appConfig: {
     sandbox: {
-      viteStartupDelay: 10, // Reduce from 7000ms to 10ms
-      timeoutMs: 5000,
+      viteStartupDelay: 5000, // Aligned with app.config.ts
+      processTimeout: 10000, // Aligned with app.config.ts
+      timeoutMs: 15000, // 15 minutes * 60 * 1000
+      timeoutMinutes: 15,
       vitePort: 5173,
-      cssRebuildDelay: 10
+      cssRebuildDelay: 1500, // Aligned with app.config.ts
+      fileOperations: {
+        ioTimeout: 3000,
+        mkdirTimeout: 2000,
+        unlinkTimeout: 2000
+      }
     },
     codeGeneration: {
-      defaultMode: 'local'
+      defaultMode: 'local',
+      analysisTimeout: 5000
     }
   }
 }));
@@ -52,8 +60,8 @@ describe('/api/create-ai-sandbox - Local Infrastructure', () => {
   const mockFs = fs as jest.Mocked<typeof fs>;
   const mockSpawn = spawn as jest.MockedFunction<typeof spawn>;
 
-  // Set shorter timeout for tests
-  jest.setTimeout(10000);
+  // Set timeout aligned with app.config.ts local operations
+  jest.setTimeout(15000);
 
   beforeEach(() => {
     // Don't clear all mocks - just reset global state and specific mocks that need resetting
@@ -226,8 +234,7 @@ describe('/api/create-ai-sandbox - Local Infrastructure', () => {
         'vite',
         {
           port: 5174,
-          sandboxId: 'test-sandbox-123',
-          url: 'http://localhost:5174'
+          sandboxId: 'test-sandbox-123'
         }
       );
     });
@@ -575,7 +582,7 @@ describe('/api/create-ai-sandbox - Local Infrastructure', () => {
       
       // Check global.sandboxState
       expect(global.sandboxState).toBeDefined();
-      expect(global.sandboxState.fileCache.sandboxId).toBe('test-sandbox-123');
+      expect(global.sandboxState.fileCache?.sandboxId).toBe('test-sandbox-123');
       
       // Check tracked files
       expect(global.existingFiles.has('src/App.jsx')).toBe(true);

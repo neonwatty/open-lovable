@@ -166,7 +166,7 @@ jest.mock('@/app/page', () => {
         key: 'input', 
         placeholder: 'Ask AI to generate or modify your code',
         value: input,
-        onChange: (e) => setInput(e.target.value),
+        onChange: (e: any) => setInput(e.target.value),
         role: 'textbox'
       }),
       React.createElement('button', { 

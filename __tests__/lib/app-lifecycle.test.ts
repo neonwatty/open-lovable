@@ -35,9 +35,14 @@ describe('App Lifecycle Integration', () => {
     mockProcessCleanupManager.performCleanup.mockResolvedValue({
       totalProcesses: 0,
       runningProcesses: 0,
-      cleanupCount: 1
+      cleanupCount: 1,
+      zombieProcesses: 0,
+      stoppedProcesses: 0,
+      errorProcesses: 0,
+      totalMemoryUsage: 0,
+      errors: []
     });
-    mockProcessCleanupManager.on.mockImplementation(() => {});
+    mockProcessCleanupManager.on.mockImplementation(() => mockProcessCleanupManager);
     
     // Reset the initialization state of the current instance
     // @ts-ignore - accessing private member for testing

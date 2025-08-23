@@ -15,8 +15,9 @@ const customJestConfig = {
   testEnvironment: 'jest-environment-jsdom',
   // Limit workers to prevent memory issues
   maxWorkers: 1,
-  // Increase timeout for heavy integration tests
-  testTimeout: 30000,
+  // Optimized timeout for local operations (aligned with app.config.ts)
+  // Extended for integration tests that involve real process management
+  testTimeout: 20000,
   collectCoverageFrom: [
     'lib/**/*.{js,jsx,ts,tsx}',
     'app/**/*.{js,jsx,ts,tsx}',

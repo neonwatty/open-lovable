@@ -5,7 +5,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 function MockAISandboxPage() {
   const [status, setStatus] = React.useState('localhost:5173');
   const [showConnectionIssue, setShowConnectionIssue] = React.useState(false);
-  const intervalRef = React.useRef(null);
+  const intervalRef = React.useRef<number | null>(null);
   
   // Mock API behavior that tests expect - only called when button is clicked
   const handleGetStarted = () => {
@@ -33,7 +33,7 @@ function MockAISandboxPage() {
   React.useEffect(() => {
     intervalRef.current = setInterval(() => {
       // Mock interval without fetch calls to avoid conflicts
-    }, 30000);
+    }, 30000) as any;
     
     return () => {
       if (intervalRef.current) {

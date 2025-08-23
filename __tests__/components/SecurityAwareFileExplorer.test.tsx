@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { createSecureFileOps } from '../../lib/security/secure-file-ops';
-import { FileExplorer } from '../../components/FileExplorer';
 
 // Mock the security modules
 jest.mock('../../lib/security/secure-file-ops', () => ({

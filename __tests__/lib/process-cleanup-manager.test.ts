@@ -9,8 +9,8 @@ import { ChildProcess } from 'child_process';
 // Mock child process
 const mockChildProcess = (): Partial<ChildProcess> => ({
   pid: Math.floor(Math.random() * 10000) + 1000,
-  stdout: new EventEmitter(),
-  stderr: new EventEmitter(),
+  stdout: new EventEmitter() as any,
+  stderr: new EventEmitter() as any,
   on: jest.fn(),
   kill: jest.fn(),
   removeAllListeners: jest.fn()
@@ -53,7 +53,11 @@ describe('ProcessCleanupManager', () => {
 
     it('should reject process without PID', () => {
       const childProcess = mockChildProcess() as ChildProcess;
-      childProcess.pid = undefined;
+      Object.defineProperty(childProcess, 'pid', {
+        value: undefined,
+        writable: true,
+        configurable: true
+      });
 
       expect(() => {
         manager.registerProcess(

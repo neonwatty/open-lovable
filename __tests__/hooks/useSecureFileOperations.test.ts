@@ -86,7 +86,7 @@ const useSecureFileOperations = (sandboxId: string) => {
       return result;
     } catch (error) {
       // Only increment failed operations if we haven't already processed the result
-      if (error.message === 'Path validation failed' || error.message.includes('Validation') || error.message === 'Disk full' || error.message === 'Path traversal' || error.message === 'Extension blocked') {
+      if ((error as Error).message === 'Path validation failed' || (error as Error).message.includes('Validation') || (error as Error).message === 'Disk full' || (error as Error).message === 'Path traversal' || (error as Error).message === 'Extension blocked') {
         setOperationStats(prev => ({ 
           ...prev, 
           activeOperations: prev.activeOperations - 1,
@@ -133,7 +133,7 @@ const useSecureFileOperations = (sandboxId: string) => {
       return result.content;
     } catch (error) {
       // Only increment failed operations if we haven't already processed the result
-      if (error.message === 'Path validation failed' || error.message.includes('Validation') || error.message === 'Disk full' || error.message === 'Path traversal' || error.message === 'Extension blocked') {
+      if ((error as Error).message === 'Path validation failed' || (error as Error).message.includes('Validation') || (error as Error).message === 'Disk full' || (error as Error).message === 'Path traversal' || (error as Error).message === 'Extension blocked') {
         setOperationStats(prev => ({ 
           ...prev, 
           activeOperations: prev.activeOperations - 1,
@@ -180,7 +180,7 @@ const useSecureFileOperations = (sandboxId: string) => {
       return result.success;
     } catch (error) {
       // Only increment failed operations if we haven't already processed the result
-      if (error.message === 'Path validation failed' || error.message.includes('Validation') || error.message === 'Disk full' || error.message === 'Path traversal' || error.message === 'Extension blocked') {
+      if ((error as Error).message === 'Path validation failed' || (error as Error).message.includes('Validation') || (error as Error).message === 'Disk full' || (error as Error).message === 'Path traversal' || (error as Error).message === 'Extension blocked') {
         setOperationStats(prev => ({ 
           ...prev, 
           activeOperations: prev.activeOperations - 1,
@@ -231,7 +231,7 @@ const useSecureFileOperations = (sandboxId: string) => {
       };
     } catch (error) {
       // Only increment failed operations if we haven't already processed the result
-      if (error.message === 'Path validation failed' || error.message.includes('Validation') || error.message === 'Disk full' || error.message === 'Path traversal' || error.message === 'Extension blocked') {
+      if ((error as Error).message === 'Path validation failed' || (error as Error).message.includes('Validation') || (error as Error).message === 'Disk full' || (error as Error).message === 'Path traversal' || (error as Error).message === 'Extension blocked') {
         setOperationStats(prev => ({ 
           ...prev, 
           activeOperations: prev.activeOperations - 1,
@@ -320,17 +320,17 @@ describe('useSecureFileOperations Hook', () => {
 
       const { result } = renderHook(() => useSecureFileOperations('test-sandbox'));
 
-      let error;
+      let error: Error | undefined;
       await act(async () => {
         try {
           await result.current.writeFile('../../../malicious.txt', 'content');
         } catch (e) {
-          error = e;
+          error = e as Error;
         }
       });
 
       expect(error).toBeDefined();
-      expect(error.message).toContain('directory traversal');
+      expect(error?.message).toContain('directory traversal');
       expect(mockPathSecurity.validatePath).toHaveBeenCalledWith('../../../malicious.txt');
       expect(mockSecureFileOps.writeFile).not.toHaveBeenCalled();
     });
@@ -741,17 +741,17 @@ describe('useSecureFileOperations Hook', () => {
 
       const { result } = renderHook(() => useSecureFileOperations('test-sandbox'));
 
-      let error;
+      let error: Error | undefined;
       await act(async () => {
         try {
           await result.current.writeFile('test.txt', 'content');
         } catch (e) {
-          error = e;
+          error = e as Error;
         }
       });
 
       expect(error).toBeDefined();
-      expect(error.message).toBe('Validation service unavailable');
+      expect(error?.message).toBe('Validation service unavailable');
       expect(result.current.securityViolations).toHaveLength(1);
       expect(result.current.securityViolations[0].type).toBe('validation_error');
     });
@@ -766,17 +766,17 @@ describe('useSecureFileOperations Hook', () => {
 
       const { result } = renderHook(() => useSecureFileOperations('test-sandbox'));
 
-      let error;
+      let error: Error | undefined;
       await act(async () => {
         try {
           await result.current.writeFile('test.txt', 'content');
         } catch (e) {
-          error = e;
+          error = e as Error;
         }
       });
 
       expect(error).toBeDefined();
-      expect(error.message).toBe('Disk full');
+      expect(error?.message).toBe('Disk full');
       expect(result.current.operationStats.failedOperations).toBe(1);
     });
   });

@@ -143,7 +143,7 @@ describe('Local Development Features', () => {
     });
 
     // Configure useState mock to bypass home screen for unit tests
-    mockUseState.mockImplementation((initial) => {
+    mockUseState.mockImplementation(((initial: any) => {
       // Mock showHomeScreen to false to bypass home overlay
       if (initial === true && typeof initial === 'boolean') {
         return [false, mockSetShowHomeScreen];
@@ -161,7 +161,7 @@ describe('Local Development Features', () => {
       }
       // Default behavior for other useState calls
       return [initial, jest.fn()];
-    });
+    }) as any);
 
     // Reset and configure fetch with default success responses
     mockFetch.mockReset();
@@ -206,8 +206,8 @@ describe('Local Development Features', () => {
     jest.clearAllMocks();
     
     // Reset any global state
-    if (global.fetch && typeof global.fetch.mockReset === 'function') {
-      global.fetch.mockReset();
+    if (global.fetch && typeof (global.fetch as any).mockReset === 'function') {
+      (global.fetch as any).mockReset();
     }
   });
 
@@ -367,7 +367,7 @@ describe('Local Development Features', () => {
 
     it('should show waiting screen when localhost is not connected', async () => {
       // Override the useState mock for this test to show disconnected localhost
-      mockUseState.mockImplementation((initial) => {
+      mockUseState.mockImplementation(((initial: any) => {
         // Mock showHomeScreen to false
         if (initial === true && typeof initial === 'boolean') {
           return [false, jest.fn()];
@@ -384,7 +384,7 @@ describe('Local Development Features', () => {
           return [{ connected: false, loading: false }, jest.fn()];
         }
         return [initial, jest.fn()];
-      });
+      }) as any);
 
       render(<AISandboxPage />);
 
