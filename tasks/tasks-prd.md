@@ -96,12 +96,14 @@
     - *Docs: [React Component Updates](https://reactjs.org/docs/components-and-props.html), [Next.js UI Updates](https://nextjs.org/docs/basic-features/pages)*
     - *Testing: UI Components - Unit: Model selection removed, Integration: UI flows work with single model*
     - **Status: ✅ COMPLETED - Model hardcoded to 'claude-code' in app/page.tsx, showModelSelector set to false in app.config.ts**
-  - [ ] 6.2 Add local sandbox status indicators showing port, process status, and connection health
+  - [x] **6.2 Add local sandbox status indicators showing port, process status, and connection health** ✅
     - *Docs: [React State Management](https://reactjs.org/docs/state-and-lifecycle.html), [Real-time UI Updates](https://nextjs.org/docs/api-routes/response-helpers)*
     - *Testing: Status Indicators - Unit: Status displays correctly, Integration: Real-time status updates*
-  - [ ] 6.3 Update preview iframe to consistently point to local development server (localhost:5173)
+    - **Status: ✅ COMPLETED - Comprehensive status indicator components (SandboxStatusIndicator, SandboxStatusBadge, useSandboxStatus hook) with real-time monitoring of port, process health, memory usage, uptime, and connection status. API endpoint provides detailed sandbox health metrics.**
+  - [x] **6.3 Update preview iframe to consistently point to local development server (localhost:5173)** ✅
     - *Docs: [iframe Integration](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/iframe), [CORS Configuration](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS)*
     - *Testing: Preview Integration - Unit: iframe loads correctly, Integration: Live preview updates with code changes*
+    - **Status: ✅ COMPLETED - SandboxPreview component updated to use localhost:${port} instead of E2B URLs**
 
 - [ ] 7.0 Update Application Configuration
   - [ ] 7.1 Modify app.config.ts to remove AI provider configurations and external service settings

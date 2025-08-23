@@ -342,8 +342,7 @@ body {
         'vite',
         { 
           port: assignedPort,
-          sandboxId,
-          url: sandboxUrl
+          sandboxId
         }
       );
       
