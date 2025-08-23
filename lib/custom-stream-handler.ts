@@ -357,8 +357,8 @@ export class CustomStreamHandler {
         }
       } catch (error) {
         // Only log error if it's not about the controller already being closed
-        if (!error.message?.includes('Controller is already closed') && 
-            !error.message?.includes('Invalid state')) {
+        if (!(error as Error).message?.includes('Controller is already closed') && 
+            !(error as Error).message?.includes('Invalid state')) {
           console.error('[CustomStreamHandler] Error closing stream:', error);
         }
       }

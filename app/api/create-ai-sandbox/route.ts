@@ -353,21 +353,21 @@ body {
     }
 
     // Set up process monitoring
-    viteProcess.stdout?.on('data', (data) => {
+    viteProcess.stdout?.on('data', (data: Buffer) => {
       console.log(`[vite-stdout] ${data.toString().trim()}`);
     });
 
-    viteProcess.stderr?.on('data', (data) => {
+    viteProcess.stderr?.on('data', (data: Buffer) => {
       const output = data.toString().trim();
       console.log(`[vite-stderr] ${output}`);
     });
 
-    viteProcess.on('exit', (code, signal) => {
+    viteProcess.on('exit', (code: number | null, signal: NodeJS.Signals | null) => {
       console.log(`[create-ai-sandbox] Vite process exited with code ${code}, signal ${signal}`);
       global.viteProcess = null;
     });
 
-    viteProcess.on('error', (error) => {
+    viteProcess.on('error', (error: Error) => {
       console.error('[create-ai-sandbox] Vite process error:', error);
       global.viteProcess = null;
     });
@@ -409,8 +409,7 @@ body {
       },
       sandboxData: {
         sandboxId,
-        url: sandboxUrl,
-        port: assignedPort
+        url: sandboxUrl
       }
     };
     

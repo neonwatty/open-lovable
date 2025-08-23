@@ -3484,13 +3484,11 @@ Focus on the key sections and content, making it clean and modern.`;
                   </div>
                 </div>
               )}
-              {/* Sandbox Status Indicator */}
-              {sandboxData && (
-                <SandboxStatusBadge
-                  autoRefresh={false} // Main hook handles refreshing
-                  className="ml-2"
-                />
-              )}
+              {/* Sandbox Status Indicator - Always show */}
+              <SandboxStatusBadge
+                autoRefresh={false} // Main hook handles refreshing
+                className="ml-2"
+              />
               {sandboxData && !generationProgress.isGenerating && (
                 <>
                   <Button
