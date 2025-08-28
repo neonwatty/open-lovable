@@ -63,6 +63,11 @@ jest.mock('ai', () => ({
   streamText: jest.fn(),
 }));
 
+// Mock the Claude Code integration
+jest.mock('@/lib/claude-code-integration', () => ({
+  claudeCodeStreamText: jest.fn(),
+}));
+
 // Mock the lib modules
 jest.mock('@/lib/context-selector', () => ({
   selectFilesForEdit: jest.fn(),
@@ -94,9 +99,10 @@ jest.mock('@/config/app.config', () => ({
   },
 }));
 
-describe.skip('/api/generate-ai-code-stream', () => {
+describe('/api/generate-ai-code-stream', () => {
   let originalEnv: NodeJS.ProcessEnv;
   let mockStreamText: jest.Mock;
+  let mockClaudeCodeStreamText: jest.Mock;
 
   beforeEach(() => {
     originalEnv = process.env;
@@ -113,6 +119,9 @@ describe.skip('/api/generate-ai-code-stream', () => {
     // Setup mocks
     mockStreamText = require('ai').streamText as jest.Mock;
     mockStreamText.mockReset();
+
+    mockClaudeCodeStreamText = require('@/lib/claude-code-integration').claudeCodeStreamText as jest.Mock;
+    mockClaudeCodeStreamText.mockReset();
 
     const mockSelectFilesForEdit = require('@/lib/context-selector').selectFilesForEdit as jest.Mock;
     const mockGetFileContents = require('@/lib/context-selector').getFileContents as jest.Mock;
@@ -131,6 +140,14 @@ describe.skip('/api/generate-ai-code-stream', () => {
       'src/App.tsx': { content: 'export default function App() {}', path: 'src/App.tsx' },
     });
     mockFormatFilesForAI.mockReturnValue('Formatted file content');
+
+    // Setup default claudeCodeStreamText mock
+    mockClaudeCodeStreamText.mockResolvedValue({
+      textStream: async function*() {
+        yield 'mock stream text';
+      },
+      toDataStreamResponse: () => new Response('mock stream'),
+    });
   });
 
   afterEach(() => {
@@ -329,7 +346,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
 
       const response = await POST(request);
       expect(response.status).toBe(200);
-      expect(mockStreamText).toHaveBeenCalledWith(
+      expect(mockClaudeCodeStreamText).toHaveBeenCalledWith(
         expect.objectContaining({
           model: expect.anything(),
           messages: expect.any(Array),
@@ -479,7 +496,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
       expect(response.status).toBe(200);
 
       // Verify that conversation context was used
-      expect(mockStreamText).toHaveBeenCalledWith(
+      expect(mockClaudeCodeStreamText).toHaveBeenCalledWith(
         expect.objectContaining({
           messages: expect.arrayContaining([
             expect.objectContaining({
@@ -508,7 +525,7 @@ describe.skip('/api/generate-ai-code-stream', () => {
         },
       };
 
-      mockStreamText.mockRejectedValue(new Error('AI model error'));
+      mockClaudeCodeStreamText.mockRejectedValue(new Error('AI model error'));
 
       const request = new NextRequest('http://localhost:3000/api/generate-ai-code-stream', {
         method: 'POST',

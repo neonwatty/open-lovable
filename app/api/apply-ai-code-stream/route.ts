@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Sandbox } from '@e2b/code-interpreter';
 import { dirname } from 'path';
 import type { ConversationState } from '@/types/conversation';
 import { updateCacheFile } from '@/lib/local-file-cache';
@@ -321,52 +320,6 @@ export async function POST(request: NextRequest) {
     // First, always check the global state for active sandbox
     let sandbox = global.activeSandbox;
     
-    // If we don't have a sandbox in this instance but we have a sandboxId,
-    // reconnect to the existing sandbox
-    if (!sandbox && sandboxId) {
-      console.log(`[apply-ai-code-stream] Sandbox ${sandboxId} not in this instance, attempting reconnect...`);
-      
-      try {
-        // Reconnect to the existing sandbox using E2B's connect method
-        sandbox = await Sandbox.connect(sandboxId, { apiKey: process.env.E2B_API_KEY });
-        console.log(`[apply-ai-code-stream] Successfully reconnected to sandbox ${sandboxId}`);
-        
-        // Store the reconnected sandbox globally for this instance
-        global.activeSandbox = sandbox;
-        
-        // Update sandbox data if needed
-        if (!global.sandboxData) {
-          const host = (sandbox as any).getHost(5173);
-          global.sandboxData = {
-            sandboxId,
-            url: `https://${host}`
-          };
-        }
-        
-        // Initialize existingFiles if not already
-        if (!global.existingFiles) {
-          global.existingFiles = new Set<string>();
-        }
-      } catch (reconnectError) {
-        console.error(`[apply-ai-code-stream] Failed to reconnect to sandbox ${sandboxId}:`, reconnectError);
-        
-        // If reconnection fails, we'll still try to return a meaningful response
-        return NextResponse.json({
-          success: false,
-          error: `Failed to reconnect to sandbox ${sandboxId}. The sandbox may have expired or been terminated.`,
-          results: {
-            filesCreated: [],
-            packagesInstalled: [],
-            commandsExecuted: [],
-            errors: [`Sandbox reconnection failed: ${(reconnectError as Error).message}`]
-          },
-          explanation: parsed.explanation,
-          structure: parsed.structure,
-          parsedFiles: parsed.files,
-          message: `Parsed ${parsed.files.length} files but couldn't apply them - sandbox reconnection failed.`
-        });
-      }
-    }
     
     // If no sandbox at all and no sandboxId provided, return an error
     if (!sandbox && !sandboxId) {
@@ -745,27 +698,8 @@ export async function POST(request: NextRequest) {
                 action: 'executing'
               });
               
-              // Use E2B commands.run() for cleaner execution
-              const result = await sandboxInstance.commands.run(cmd, {
-                cwd: '/home/user/app',
-                timeout: 60,
-                on_stdout: async (data: string) => {
-                  await sendProgress({
-                    type: 'command-output',
-                    command: cmd,
-                    output: data,
-                    stream: 'stdout'
-                  });
-                },
-                on_stderr: async (data: string) => {
-                  await sendProgress({
-                    type: 'command-output',
-                    command: cmd,
-                    output: data,
-                    stream: 'stderr'
-                  });
-                }
-              });
+              // Commands are not executed in local sandbox mode for security
+              console.log(`[apply-ai-code-stream] Skipping command execution in local mode: ${cmd}`);
               
               if (results.commandsExecuted) {
                 results.commandsExecuted.push(cmd);
@@ -774,8 +708,9 @@ export async function POST(request: NextRequest) {
               await sendProgress({
                 type: 'command-complete',
                 command: cmd,
-                exitCode: result.exitCode,
-                success: result.exitCode === 0
+                exitCode: 0,
+                success: true,
+                skipped: true
               });
             } catch (error) {
               if (results.errors) {

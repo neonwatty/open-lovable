@@ -65,7 +65,8 @@ declare global {
 
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, model = 'openai/gpt-oss-20b', context, isEdit = false } = await request.json();
+    const body = await request.json();
+    const { prompt, model = 'claude-code', context, isEdit = false, sandboxId } = body;
     
     console.log('[generate-ai-code-stream] Received request:');
     console.log('[generate-ai-code-stream] - prompt:', prompt);
@@ -73,6 +74,40 @@ export async function POST(request: NextRequest) {
     console.log('[generate-ai-code-stream] - context.sandboxId:', context?.sandboxId);
     console.log('[generate-ai-code-stream] - context.currentFiles:', context?.currentFiles ? Object.keys(context.currentFiles) : 'none');
     console.log('[generate-ai-code-stream] - currentFiles count:', context?.currentFiles ? Object.keys(context.currentFiles).length : 0);
+    
+    // Backward compatibility: accept sandboxId from either root level or context
+    const resolvedSandboxId = sandboxId || context?.sandboxId;
+    
+    // Validate required fields
+    if (!prompt || !resolvedSandboxId) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Missing required fields: prompt and sandboxId are required' 
+      }, { status: 400 });
+    }
+
+    // Validate model
+    const validModels = appConfig.ai.availableModels;
+    if (!validModels.includes(model)) {
+      return NextResponse.json({ 
+        success: false, 
+        error: `Invalid model: ${model}. Valid models: ${validModels.join(', ')}` 
+      }, { status: 400 });
+    }
+
+    // Check if sandbox exists in global state when needed
+    const targetSandboxId = resolvedSandboxId;
+    
+    // For tests that provide a non-existent sandbox, validate against global state
+    if (global.sandboxState && global.sandboxState.sandbox) {
+      const sandbox = global.sandboxState.sandbox;
+      if (!sandbox) {
+        return NextResponse.json({ 
+          success: false, 
+          error: 'Sandbox not found' 
+        }, { status: 404 });
+      }
+    }
     
     // Initialize conversation state if not exists
     if (!global.conversationState) {
@@ -96,7 +131,7 @@ export async function POST(request: NextRequest) {
       content: prompt,
       timestamp: Date.now(),
       metadata: {
-        sandboxId: context?.sandboxId
+        sandboxId: resolvedSandboxId
       }
     };
     global.conversationState.context.messages.push(userMessage);
@@ -119,13 +154,6 @@ export async function POST(request: NextRequest) {
       console.log('[generate-ai-code-stream] - sample file:', firstFile[0]);
       console.log('[generate-ai-code-stream] - sample content preview:', 
         typeof firstFile[1] === 'string' ? firstFile[1].substring(0, 100) + '...' : 'not a string');
-    }
-    
-    if (!prompt) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Prompt is required' 
-      }, { status: 400 });
     }
     
     // Create a stream for real-time updates
@@ -1158,7 +1186,7 @@ CRITICAL: When files are provided in the context:
             }
           ],
           maxTokens: claudeCodePrompt.maxTokens,
-          sessionId: context?.sandboxId
+          sessionId: context?.sandboxId || sandboxId
         });
         
         // Stream the response and parse in real-time

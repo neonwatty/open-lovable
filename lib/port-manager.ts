@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { createServer } from 'net';
+import { appConfig } from '../config/app.config';
 
 export interface PortManagerConfig {
   startPort?: number;
@@ -59,14 +60,31 @@ export class PortManager extends EventEmitter implements PortManagerEventsInterf
 
   constructor(config: PortManagerConfig = {}) {
     super();
-    this.config = {
-      startPort: config.startPort || 5173,
-      endPort: config.endPort || 5200,
-      maxRetries: config.maxRetries || 3,
-      timeout: config.timeout || 5000,
-      enableCORS: config.enableCORS ?? true,
-    };
+    // Defer config loading to avoid circular dependencies
+    this.config = this.initializeConfig(config);
     this.nextPort = this.config.startPort;
+  }
+
+  private initializeConfig(config: PortManagerConfig): Required<PortManagerConfig> {
+    try {
+      return {
+        startPort: config.startPort || appConfig.sandbox?.ports?.range?.start || 5173,
+        endPort: config.endPort || appConfig.sandbox?.ports?.range?.end || 5200,
+        maxRetries: config.maxRetries || appConfig.sandbox?.ports?.maxRetries || 10,
+        timeout: config.timeout || appConfig.sandbox?.ports?.checkTimeout || 2000,
+        enableCORS: config.enableCORS ?? true,
+      };
+    } catch (error) {
+      // Fallback to hardcoded defaults if config loading fails
+      console.warn('Failed to load port configuration, using defaults:', error);
+      return {
+        startPort: config.startPort || 5173,
+        endPort: config.endPort || 5200,
+        maxRetries: config.maxRetries || 10,
+        timeout: config.timeout || 2000,
+        enableCORS: config.enableCORS ?? true,
+      };
+    }
   }
 
   /**

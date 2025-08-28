@@ -106,7 +106,7 @@ describe('Port Manager API Integration', () => {
     };
     
     // Mock spawn to handle npm install and vite commands quickly
-    spawn.mockImplementation((command, args, options) => {
+    spawn.mockImplementation((command: string, args: string[] | undefined, options: any) => {
       if (command === 'npm' && args && args[0] === 'install') {
         // Immediate completion for npm install
         setTimeout(() => {

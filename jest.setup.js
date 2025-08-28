@@ -93,7 +93,10 @@ if (typeof global.Response === 'undefined' || process.env.JEST_WORKER_ID !== und
     }
     
     async text() {
-      return Promise.resolve(this.body)
+      if (typeof this.body === 'string') {
+        return Promise.resolve(this.body)
+      }
+      return Promise.resolve(JSON.stringify(this.body))
     }
   }
   
@@ -138,6 +141,9 @@ if (global.Response) {
   })
 }
 
+// Fix EventEmitter memory leak warnings during parallel test execution
+require('events').EventEmitter.defaultMaxListeners = 20;
+
 // Global test configuration
 beforeEach(() => {
   // Clear all mocks before each test
@@ -149,6 +155,40 @@ afterEach(() => {
   // Cleanup any test artifacts
   jest.restoreAllMocks()
 })
+
+// Mock NextResponse for API route tests - this is applied globally but may be overridden by individual tests
+if (process.env.JEST_WORKER_ID !== undefined) {
+  jest.doMock('next/server', () => {
+    const originalModule = jest.requireActual('next/server');
+    
+    // Create a mock NextResponse object that behaves like the real one
+    const mockNextResponse = {
+      status: 200,
+      statusText: 'OK',
+      headers: new Map(),
+      json: jest.fn().mockImplementation(function() {
+        return Promise.resolve(this._data);
+      }),
+      text: jest.fn().mockImplementation(function() {
+        return Promise.resolve(JSON.stringify(this._data));
+      })
+    };
+    
+    return {
+      ...originalModule,
+      NextResponse: {
+        ...originalModule.NextResponse,
+        json: jest.fn().mockImplementation((data, init) => {
+          // Return a proper mock NextResponse object
+          const response = Object.create(mockNextResponse);
+          response._data = data;
+          response.status = init?.status || 200;
+          return response;
+        })
+      }
+    };
+  });
+}
 
 // Mock LocalFileCacheAdapter after other mocks
 jest.mock('./lib/local-file-cache', () => ({

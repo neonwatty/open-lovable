@@ -2,12 +2,7 @@ import { NextRequest } from 'next/server';
 import { SandboxManager } from '@/lib/sandbox-manager';
 import { POST } from '@/app/api/create-ai-sandbox/route';
 
-// Mock the E2B sandbox to test local sandbox integration
-jest.mock('@e2b/code-interpreter', () => ({
-  Sandbox: jest.fn().mockImplementation(() => {
-    throw new Error('E2B service unavailable');
-  }),
-}));
+// Local sandbox manager tests
 
 // Mock fs for controlled testing
 jest.mock('fs', () => ({
@@ -38,10 +33,10 @@ describe('Sandbox API Integration', () => {
   });
 
   describe('create-ai-sandbox route with local fallback', () => {
-    it('should handle E2B service unavailable gracefully', async () => {
-      // The mock already throws an error, simulating E2B failure
+    it('should create local sandbox successfully', async () => {
+      // Test that we can create local sandbox directly
       
-      // Test that we can still create local sandbox as fallback
+      // Test that we can create local sandbox
       const mockFs = require('fs').promises;
       mockFs.access.mockResolvedValueOnce(undefined); // ensureSandboxesDirectory
       mockFs.mkdir.mockResolvedValueOnce(undefined);

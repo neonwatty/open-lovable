@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { promises as fs } from 'fs';
 import path from 'path';
 
-test.describe('Transactional File Operations E2E Tests', () => {
+test.describe('Transactional File Operations - Local Sandbox', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the main application
     await page.goto('/');
@@ -17,7 +17,7 @@ test.describe('Transactional File Operations E2E Tests', () => {
   });
 
   test('should handle transactional file creation with rollback on failure', async ({ page }) => {
-    // Mock E2B sandbox environment
+    // Mock local sandbox environment
     await page.route('/api/apply-ai-code-stream', async route => {
       const request = route.request();
       const body = JSON.parse(request.postData() || '{}');

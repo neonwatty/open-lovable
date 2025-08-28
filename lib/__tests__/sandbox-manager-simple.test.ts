@@ -19,7 +19,7 @@ describe('SandboxManager Simple Tests', () => {
     it('should use default values when no config provided', () => {
       const defaultManager = new SandboxManager();
       expect(defaultManager['sandboxesDir']).toBe(path.join(process.cwd(), 'sandboxes'));
-      expect(defaultManager['maxSandboxes']).toBe(50);
+      expect(defaultManager['maxSandboxes']).toBe(10);
       expect(defaultManager['cleanupInterval']).toBe(24 * 60 * 60 * 1000);
     });
 

@@ -56,18 +56,7 @@ import path from 'path';
 import { tmpdir } from 'os';
 import { NextRequest } from 'next/server';
 
-// Mock the E2B sandbox since we're testing file operations
-jest.mock('@e2b/code-interpreter', () => ({
-  Sandbox: {
-    connect: jest.fn().mockResolvedValue({
-      sandboxId: 'test-sandbox-id',
-      getHost: jest.fn().mockReturnValue('test-host'),
-      commands: {
-        run: jest.fn().mockResolvedValue({ exitCode: 0 })
-      }
-    })
-  }
-}));
+// Local sandbox manager integration tests
 
 // Import the route after all mocks are set up
 import { POST } from '../../app/api/apply-ai-code-stream/route';

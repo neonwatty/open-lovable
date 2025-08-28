@@ -1,0 +1,271 @@
+{
+  "tasks": [
+    {
+      "number": "1.0",
+      "name": "Cleanup E2B Dependencies Phase",
+      "description": "Remove E2B cloud sandbox dependencies while preserving local functionality",
+      "parent": null,
+      "status": "pending",
+      "priority": 1,
+      "dependencies": [],
+      "files": [],
+      "docs_references": ["https://docs.e2b.dev/"],
+      "testing_strategy": "Unit tests for dependency removal, integration tests for local functionality preservation",
+      "notes": "System already uses local sandbox manager, focus on removing lingering E2B imports and references"
+    },
+    {
+      "number": "1.1",
+      "name": "Remove E2B Package Dependencies",
+      "description": "Remove E2B packages from package.json and update lock files",
+      "parent": "1.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": [],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/package.json",
+        "/Users/jeremywatt/Desktop/open-lovable/package-lock.json"
+      ],
+      "docs_references": ["https://docs.e2b.dev/"],
+      "testing_strategy": "Verify npm install works without E2B packages, run existing unit tests",
+      "notes": "Search for @e2b-dev/* packages and remove. Update lockfile to ensure clean state"
+    },
+    {
+      "number": "1.2",
+      "name": "Remove E2B Import Statements",
+      "description": "Find and remove all E2B imports from source files",
+      "parent": "1.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["1.1"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/create-ai-sandbox/route.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/apply-ai-code-stream/route.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/kill-sandbox/route.ts"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Static analysis to ensure no E2B imports remain, compile-time validation",
+      "notes": "Use grep to find all E2B references, replace with local equivalents or remove dead code"
+    },
+    {
+      "number": "1.3",
+      "name": "Update API Routes for Local Operations",
+      "description": "Modify API routes to use local sandbox manager instead of E2B client",
+      "parent": "1.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["1.2"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/create-ai-sandbox/route.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/apply-ai-code-stream/route.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/kill-sandbox/route.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/install-packages/route.ts"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Integration tests for each API route using local sandbox manager",
+      "notes": "Routes already use local functionality, clean up any remaining E2B client instantiation"
+    },
+    {
+      "number": "1.4",
+      "name": "Update Environment Configuration",
+      "description": "Remove E2B environment variables and update configuration templates",
+      "parent": "1.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["1.3"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/.env.example",
+        "/Users/jeremywatt/Desktop/open-lovable/config/app.config.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/CLAUDE.md"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Verify application starts without E2B environment variables",
+      "notes": "Remove E2B_API_KEY references, update documentation to reflect local-only operation"
+    },
+    {
+      "number": "2.0",
+      "name": "AI Provider Integration Consolidation Phase",
+      "description": "Consolidate AI provider integration to Claude Code only",
+      "parent": null,
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["1.0"],
+      "files": [],
+      "docs_references": ["https://claude.ai/code"],
+      "testing_strategy": "End-to-end tests with Claude Code integration, model switching validation",
+      "notes": "System already has Claude Code integration, remove other provider configurations"
+    },
+    {
+      "number": "2.1",
+      "name": "Update AI Model Configuration",
+      "description": "Configure app.config.ts to use only Claude Code model",
+      "parent": "2.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": [],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/config/app.config.ts"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Unit tests for configuration validation, integration tests for model selection",
+      "notes": "Configuration already shows claude-code as default model, ensure UI elements reflect this"
+    },
+    {
+      "number": "2.2",
+      "name": "Remove Multi-Provider API Logic",
+      "description": "Simplify code generation routes to use Claude Code exclusively",
+      "parent": "2.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["2.1"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/generate-ai-code-stream/route.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/app/api/analyze-edit-intent/route.ts"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Integration tests for code generation with Claude Code only",
+      "notes": "Routes already use Claude Code integration, remove any provider selection logic"
+    },
+    {
+      "number": "2.3",
+      "name": "Update UI Components",
+      "description": "Remove model selector and provider-specific UI elements",
+      "parent": "2.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["2.2"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/app/page.tsx",
+        "/Users/jeremywatt/Desktop/open-lovable/components"
+      ],
+      "docs_references": [],
+      "testing_strategy": "UI tests to verify model selector is hidden, user experience validation",
+      "notes": "Config already shows showModelSelector: false, verify UI implementation matches"
+    },
+    {
+      "number": "3.0",
+      "name": "Configuration and Dependencies Phase",
+      "description": "Update configurations and dependencies for local-only operation",
+      "parent": null,
+      "status": "pending",
+      "priority": 2,
+      "dependencies": ["2.0"],
+      "files": [],
+      "docs_references": [],
+      "testing_strategy": "Configuration validation tests, dependency audit",
+      "notes": "Focus on optimizing existing local configurations"
+    },
+    {
+      "number": "3.1",
+      "name": "Optimize Local Sandbox Configuration",
+      "description": "Review and optimize sandbox manager configuration for local-only operation",
+      "parent": "3.0",
+      "status": "pending",
+      "priority": 2,
+      "dependencies": [],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/config/app.config.ts",
+        "/Users/jeremywatt/Desktop/open-lovable/lib/sandbox-manager.ts"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Performance tests for sandbox operations, resource usage validation",
+      "notes": "Configuration already optimized for local operations, review for any improvements"
+    },
+    {
+      "number": "3.2",
+      "name": "Update Documentation",
+      "description": "Update README and documentation to reflect Claude Code-only setup",
+      "parent": "3.0",
+      "status": "pending",
+      "priority": 3,
+      "dependencies": ["1.4", "2.3"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/README.md",
+        "/Users/jeremywatt/Desktop/open-lovable/CLAUDE.md"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Documentation review, setup instruction validation",
+      "notes": "Ensure all setup instructions reflect local-only operation with Claude Code"
+    },
+    {
+      "number": "3.3",
+      "name": "Clean Up Test Files",
+      "description": "Remove or update tests that reference E2B or multiple AI providers",
+      "parent": "3.0",
+      "status": "pending",
+      "priority": 2,
+      "dependencies": ["1.3", "2.2"],
+      "files": [
+        "/Users/jeremywatt/Desktop/open-lovable/__tests__/",
+        "/Users/jeremywatt/Desktop/open-lovable/e2e/"
+      ],
+      "docs_references": [],
+      "testing_strategy": "Test suite validation, ensure all tests pass with local-only setup",
+      "notes": "Update integration tests to use local sandbox manager, remove E2B-specific tests"
+    },
+    {
+      "number": "4.0",
+      "name": "Testing and Validation Phase",
+      "description": "Comprehensive testing of local Claude Code-only implementation",
+      "parent": null,
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["3.0"],
+      "files": [],
+      "docs_references": [],
+      "testing_strategy": "Full test suite execution, user acceptance testing, performance validation",
+      "notes": "Validate that all existing functionality works with local-only setup"
+    },
+    {
+      "number": "4.1",
+      "name": "Run Unit Test Suite",
+      "description": "Execute all unit tests to ensure local functionality works correctly",
+      "parent": "4.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": [],
+      "files": [],
+      "docs_references": [],
+      "testing_strategy": "npm run test:unit with coverage analysis",
+      "notes": "Focus on sandbox manager, file operations, and configuration validation"
+    },
+    {
+      "number": "4.2",
+      "name": "Run Integration Tests",
+      "description": "Execute integration tests for API routes and sandbox operations",
+      "parent": "4.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["4.1"],
+      "files": [],
+      "docs_references": [],
+      "testing_strategy": "npm run test:integration focusing on local sandbox workflows",
+      "notes": "Validate end-to-end code generation and application workflows"
+    },
+    {
+      "number": "4.3",
+      "name": "Performance Testing",
+      "description": "Validate performance of local-only operations meets requirements",
+      "parent": "4.0",
+      "status": "pending",
+      "priority": 2,
+      "dependencies": ["4.2"],
+      "files": [],
+      "docs_references": [],
+      "testing_strategy": "Performance benchmarks for code generation and sandbox operations",
+      "notes": "Ensure local operations are fast and responsive, measure resource usage"
+    },
+    {
+      "number": "4.4",
+      "name": "User Acceptance Testing",
+      "description": "End-to-end validation of user workflows with Claude Code-only setup",
+      "parent": "4.0",
+      "status": "pending",
+      "priority": 1,
+      "dependencies": ["4.3"],
+      "files": [],
+      "docs_references": [],
+      "testing_strategy": "Manual testing of key user journeys: code generation, editing, package management",
+      "notes": "Validate complete user experience matches expectations for local development"
+    }
+  ]
+}

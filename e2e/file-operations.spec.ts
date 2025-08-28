@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('File Operations - Node.js fs Migration', () => {
+test.describe('File Operations - Local Sandbox', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to the main application
     await page.goto('/');
@@ -8,8 +8,8 @@ test.describe('File Operations - Node.js fs Migration', () => {
   });
 
   test('should create files through AI code generation', async ({ page }) => {
-    // Skip this test for now as it requires E2B integration
-    test.skip(true, 'E2B integration test - requires full sandbox setup');
+    // Skip this test for now as it requires local sandbox integration
+    test.skip(true, 'Local sandbox integration test - requires full sandbox setup');
 
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
@@ -56,8 +56,8 @@ test.describe('File Operations - Node.js fs Migration', () => {
   });
 
   test('should show real-time progress during file operations', async ({ page }) => {
-    // Skip - requires full E2B integration
-    test.skip(true, 'E2B integration test - requires backend services');
+    // Skip - requires full local sandbox integration
+    test.skip(true, 'Local sandbox integration test - requires backend services');
   });
 
   test('API route - apply-ai-code-stream should use Node.js fs operations', async ({ page }) => {

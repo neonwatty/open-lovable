@@ -132,7 +132,7 @@ describe('Backward Compatibility Tests', () => {
           prompt: 'Create a button component',
           sandboxId: 'compat-test-sandbox',
           // No context wrapper - direct fields
-          model: 'claude-3-5-sonnet'
+          model: 'claude-code'
         })
       });
 

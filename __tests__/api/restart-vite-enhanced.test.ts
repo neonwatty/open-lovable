@@ -3,10 +3,17 @@ import { defaultPortManager } from '@/lib/port-manager';
 import { processCleanupManager } from '@/lib/process-cleanup-manager';
 import { spawn } from 'child_process';
 import { promises as fs } from 'fs';
+import { NextResponse } from 'next/server';
 
 jest.mock('@/lib/port-manager');
 jest.mock('@/lib/process-cleanup-manager');
 jest.mock('child_process');
+jest.mock('next/server', () => ({
+  NextRequest: jest.fn(),
+  NextResponse: {
+    json: jest.fn()
+  }
+}));
 jest.mock('fs', () => ({
   promises: {
     readFile: jest.fn(),
@@ -20,11 +27,22 @@ describe('/api/restart-vite - Port Manager Integration', () => {
   const mockProcessCleanup = processCleanupManager as jest.Mocked<typeof processCleanupManager>;
   const mockSpawn = spawn as jest.MockedFunction<typeof spawn>;
   const mockFs = fs as jest.Mocked<typeof fs>;
+  const mockNextResponse = NextResponse as jest.Mocked<typeof NextResponse>;
 
   beforeEach(() => {
     jest.clearAllMocks();
     global.activeSandbox = null;
     global.viteProcess = null;
+    
+    // Setup NextResponse.json mock to return a proper response object
+    mockNextResponse.json.mockImplementation((data, init) => {
+      const response = {
+        status: init?.status || 200,
+        json: () => Promise.resolve(data),
+        text: () => Promise.resolve(JSON.stringify(data))
+      };
+      return response as any;
+    });
     
     // Mock successful process
     const mockViteProcess = {
@@ -59,7 +77,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.data.port).toBe(5175);
@@ -80,7 +98,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.data.port).toBe(5176);
@@ -99,7 +117,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.data.port).toBe(5177);
@@ -112,7 +130,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       mockPortManager.reservePort.mockRejectedValue(new Error('Port exhausted'));
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.data.port).toBe(5173); // Fallback to default
@@ -132,7 +150,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.data.port).toBe(5178);
@@ -150,7 +168,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
@@ -188,7 +206,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
@@ -265,7 +283,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       mockPortManager.activatePort.mockRejectedValue(new Error('Activation failed'));
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200); // Should still succeed
       expect(data.success).toBe(true);
@@ -279,7 +297,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       mockPortManager.reservePort.mockRejectedValue(new Error('All ports exhausted'));
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
@@ -358,7 +376,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200);
       expect(data.data).toHaveProperty('healthCheck');
@@ -412,7 +430,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       mockFs.writeFile.mockRejectedValue(new Error('Write failed'));
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(response.status).toBe(200); // Should continue despite error file failure
       expect(data.success).toBe(true);
@@ -432,7 +450,7 @@ describe('/api/restart-vite - Port Manager Integration', () => {
       });
       
       const response = await POST();
-      const data = JSON.parse(await response.text());
+      const data = await response.json();
       
       expect(data).toMatchObject({
         success: true,

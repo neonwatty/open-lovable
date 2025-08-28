@@ -1,6 +1,7 @@
 import { promises as fs } from 'fs';
-import path from 'path';
-import crypto from 'crypto';
+import * as path from 'path';
+import * as crypto from 'crypto';
+import { appConfig } from '../config/app.config';
 
 export interface SandboxConfig {
   sandboxesDir?: string;
@@ -20,9 +21,17 @@ export class SandboxManager {
   private cleanupInterval: number;
 
   constructor(config: SandboxConfig = {}) {
-    this.sandboxesDir = config.sandboxesDir || path.join(process.cwd(), 'sandboxes');
-    this.maxSandboxes = config.maxSandboxes || 50;
-    this.cleanupInterval = config.cleanupInterval || 24 * 60 * 60 * 1000; // 24 hours
+    // Use the new centralized configuration with backwards compatibility and fallbacks
+    try {
+      this.sandboxesDir = config.sandboxesDir || path.resolve(appConfig.sandbox?.rootPath || path.join(process.cwd(), 'sandboxes'));
+      this.maxSandboxes = config.maxSandboxes || appConfig.sandbox?.directoryManagement?.maxConcurrentSandboxes || 10;
+      this.cleanupInterval = config.cleanupInterval || ((appConfig.sandbox?.directoryManagement?.autoCleanupAfterHours || 24) * 60 * 60 * 1000);
+    } catch (error) {
+      console.warn('Failed to load sandbox configuration, using defaults:', error);
+      this.sandboxesDir = config.sandboxesDir || path.join(process.cwd(), 'sandboxes');
+      this.maxSandboxes = config.maxSandboxes || 10;
+      this.cleanupInterval = config.cleanupInterval || 24 * 60 * 60 * 1000;
+    }
   }
 
   /**

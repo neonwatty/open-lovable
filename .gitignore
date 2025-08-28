@@ -44,9 +44,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# E2B template builds
+# Build artifacts
 *.tar.gz
-e2b-template-*
 
 # IDE
 .vscode/

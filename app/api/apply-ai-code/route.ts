@@ -331,10 +331,10 @@ export async function POST(request: NextRequest) {
           fileContent = fileContent.replace(/import\s+['"]\.\/[^'"]+\.css['"];?\s*\n?/g, '');
         }
         
-        console.log(`[apply-ai-code] Writing file using E2B files API: ${fullPath}`);
+        console.log(`[apply-ai-code] Writing file using local files API: ${fullPath}`);
         
         try {
-          // Use the correct E2B API - sandbox.files.write()
+          // Use the local sandbox files API
           await global.activeSandbox.files.write(fullPath, fileContent);
           console.log(`[apply-ai-code] Successfully wrote file: ${fullPath}`);
           
@@ -347,7 +347,7 @@ export async function POST(request: NextRequest) {
           }
           
         } catch (writeError) {
-          console.error(`[apply-ai-code] E2B file write error:`, writeError);
+          console.error(`[apply-ai-code] Local file write error:`, writeError);
           throw writeError;
         }
         

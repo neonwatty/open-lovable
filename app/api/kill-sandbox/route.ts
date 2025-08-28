@@ -112,10 +112,10 @@ export async function POST() {
           }
         }
         
-        // Kill E2B sandbox if it exists (backwards compatibility)
+        // Kill local sandbox if it exists
         if (typeof global.activeSandbox.close === 'function') {
           await global.activeSandbox.close();
-          console.log('[kill-sandbox] E2B Sandbox closed successfully');
+          console.log('[kill-sandbox] Local sandbox closed successfully');
         }
         
         sandboxKilled = true;

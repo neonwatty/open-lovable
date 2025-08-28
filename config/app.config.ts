@@ -1,14 +1,23 @@
 // Application Configuration
 // This file contains all configurable settings for the application
 
+import * as path from 'path';
+
+// Check if running in local mode for optimized settings
+const isLocalMode = process.env.LOCAL_MODE === 'true';
+const isDevelopment = process.env.NODE_ENV === 'development';
+
 export const appConfig = {
   // Local Sandbox Configuration
   sandbox: {
-    // Local sandbox directory path
+    // Local sandbox root directory path - all sandboxes will be created here
+    rootPath: process.env.LOCAL_SANDBOX_ROOT || path.resolve(process.cwd(), 'sandboxes'),
+    
+    // Legacy support for single sandbox path (deprecated, use rootPath instead)
     path: process.env.LOCAL_SANDBOX_PATH || './sandbox',
     
     // Process timeout in minutes (optimized for local operations)
-    timeoutMinutes: 15,
+    timeoutMinutes: isLocalMode ? 10 : 15,
     
     // Convert to milliseconds for process management
     get timeoutMs() {
@@ -21,21 +30,29 @@ export const appConfig = {
       default: parseInt(process.env.VITE_PORT || '5173'),
       // Port range for dynamic allocation
       range: {
-        start: 5173,
-        end: 5200
+        start: parseInt(process.env.SANDBOX_PORT_START || '5173'),
+        end: parseInt(process.env.SANDBOX_PORT_END || '5200')
       },
       // Maximum retry attempts for port allocation
-      maxRetries: 10
+      maxRetries: parseInt(process.env.SANDBOX_PORT_MAX_RETRIES || '10'),
+      // Port availability check timeout (milliseconds)
+      checkTimeout: parseInt(process.env.SANDBOX_PORT_CHECK_TIMEOUT || '2000'),
+      // Bind address for development server
+      bindAddress: process.env.SANDBOX_BIND_ADDRESS || 'localhost',
+      // Force specific port (if set, will not use dynamic allocation)
+      forcePort: process.env.FORCE_SANDBOX_PORT ? parseInt(process.env.FORCE_SANDBOX_PORT) : null,
+      // Port conflict resolution strategy: 'increment' | 'random' | 'fail'
+      conflictResolution: (process.env.SANDBOX_PORT_CONFLICT_STRATEGY as 'increment' | 'random' | 'fail') || 'increment'
     },
     
     // Time to wait for Vite to be ready (optimized for local)
-    viteStartupDelay: 5000,
+    viteStartupDelay: isLocalMode ? 3000 : 5000,
     
     // Time to wait for CSS rebuild (optimized for local)
-    cssRebuildDelay: 1500,
+    cssRebuildDelay: isLocalMode ? 1000 : 1500,
     
     // Local process timeout for operations (optimized for local filesystem)
-    processTimeout: 10000,
+    processTimeout: isLocalMode ? 8000 : 10000,
     
     // Server-level timeout configurations for Node.js best practices
     serverTimeouts: {
@@ -52,21 +69,41 @@ export const appConfig = {
     // File system operation timeouts (optimized for local development 2024)
     fileOperations: {
       // Timeout for file read/write operations (reduced for responsiveness)
-      ioTimeout: 3000,
+      ioTimeout: isLocalMode ? 2000 : 3000,
       // Timeout for directory creation (quick local operations)
-      mkdirTimeout: 2000,
+      mkdirTimeout: isLocalMode ? 1500 : 2000,
       // Timeout for file deletion (quick local operations)
-      unlinkTimeout: 2000,
+      unlinkTimeout: isLocalMode ? 1500 : 2000,
       // Timeout for file system watch operations
-      watchTimeout: 1000,
+      watchTimeout: isLocalMode ? 800 : 1000,
       // Timeout for file stat operations
-      statTimeout: 1000,
+      statTimeout: isLocalMode ? 800 : 1000,
       // Timeout for recursive operations (copying, moving)
-      recursiveTimeout: 10000,
+      recursiveTimeout: isLocalMode ? 8000 : 10000,
       // Retry delay for EBUSY, EMFILE, ENFILE, ENOTEMPTY, or EPERM errors
-      retryDelay: 100,
+      retryDelay: isLocalMode ? 50 : 100,
       // Maximum retry attempts for filesystem operations
-      maxRetries: 3
+      maxRetries: isLocalMode ? 2 : 3
+    },
+    
+    // Sandbox directory management
+    directoryManagement: {
+      // Automatically clean up old sandboxes (hours)
+      autoCleanupAfterHours: parseInt(process.env.SANDBOX_CLEANUP_HOURS || '24'),
+      // Maximum number of concurrent sandboxes
+      maxConcurrentSandboxes: parseInt(process.env.SANDBOX_MAX_CONCURRENT || '10'),
+      // Sandbox directory naming strategy: 'uuid' | 'timestamp' | 'sequential'
+      namingStrategy: (process.env.SANDBOX_NAMING_STRATEGY as 'uuid' | 'timestamp' | 'sequential') || 'uuid',
+      // Enable sandbox isolation (create separate node_modules for each)
+      enableIsolation: process.env.SANDBOX_ISOLATION === 'true',
+      // Sandbox template directory (for initializing new sandboxes)
+      templatePath: process.env.SANDBOX_TEMPLATE_PATH || null,
+      // Enable sandbox metadata tracking
+      enableMetadata: process.env.SANDBOX_METADATA !== 'false',
+      // Sandbox disk space monitoring
+      enableDiskSpaceMonitoring: process.env.SANDBOX_DISK_MONITORING !== 'false',
+      // Maximum disk space per sandbox (MB)
+      maxSandboxSizeMB: parseInt(process.env.SANDBOX_MAX_SIZE_MB || '500')
     },
   },
   
@@ -137,14 +174,19 @@ export const appConfig = {
   
   // Development Configuration
   dev: {
-    // Enable debug logging
-    enableDebugLogging: true,
+    // Enable debug logging (enhanced in local mode)
+    enableDebugLogging: isLocalMode ? true : isDevelopment,
     
-    // Enable performance monitoring
-    enablePerformanceMonitoring: false,
+    // Enable performance monitoring (more detailed in local mode)
+    enablePerformanceMonitoring: isLocalMode ? true : false,
     
-    // Log API responses
-    logApiResponses: true,
+    // Log API responses (verbose in local mode)
+    logApiResponses: isLocalMode ? true : isDevelopment,
+    
+    // Local mode specific settings
+    enableLocalModeOptimizations: isLocalMode,
+    enableFastRefresh: isLocalMode,
+    enableInlineSourceMaps: isLocalMode,
   },
   
   // Local Package Installation Configuration
@@ -275,6 +317,56 @@ export function getConfig<K extends keyof typeof appConfig>(key: K): typeof appC
 // Helper to get nested config values
 export function getConfigValue(path: string): any {
   return path.split('.').reduce((obj, key) => obj?.[key], appConfig as any);
+}
+
+// Helper to validate sandbox configuration
+export function validateSandboxConfig(): { valid: boolean; errors: string[] } {
+  const errors: string[] = [];
+  
+  // Validate port range
+  if (appConfig.sandbox.ports.range.start >= appConfig.sandbox.ports.range.end) {
+    errors.push('Port range start must be less than end');
+  }
+  
+  if (appConfig.sandbox.ports.range.start < 1024) {
+    errors.push('Port range start should be >= 1024 for non-privileged ports');
+  }
+  
+  if (appConfig.sandbox.ports.range.end > 65535) {
+    errors.push('Port range end must be <= 65535');
+  }
+  
+  // Validate sandbox limits
+  if (appConfig.sandbox.directoryManagement.maxConcurrentSandboxes < 1) {
+    errors.push('Maximum concurrent sandboxes must be >= 1');
+  }
+  
+  if (appConfig.sandbox.directoryManagement.maxSandboxSizeMB < 10) {
+    errors.push('Maximum sandbox size must be >= 10MB');
+  }
+  
+  // Validate cleanup interval
+  if (appConfig.sandbox.directoryManagement.autoCleanupAfterHours < 1) {
+    errors.push('Auto cleanup interval must be >= 1 hour');
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+// Helper to get absolute sandbox root path
+export function getSandboxRootPath(): string {
+  return path.resolve(appConfig.sandbox.rootPath);
+}
+
+// Helper to get next available port in range
+export function getPortRange(): { start: number; end: number } {
+  return {
+    start: appConfig.sandbox.ports.range.start,
+    end: appConfig.sandbox.ports.range.end
+  };
 }
 
 export default appConfig;

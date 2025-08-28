@@ -57,7 +57,7 @@ with open('/tmp/project.zip', 'rb') as f:
     return NextResponse.json({
       success: true,
       dataUrl,
-      fileName: 'e2b-project.zip',
+      fileName: 'project.zip',
       message: 'Zip file created successfully'
     });
     

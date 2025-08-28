@@ -5,6 +5,25 @@ import path from 'path';
 import { promises as fs } from 'fs';
 import os from 'os';
 
+// Helper to create responses that work in test environment
+function createTestResponse(data: any, status: number): NextResponse {
+  try {
+    const response = NextResponse.json(data, { status });
+    if (!response || !response.status) {
+      return new Response(JSON.stringify(data), {
+        status,
+        headers: { 'Content-Type': 'application/json' }
+      }) as NextResponse;
+    }
+    return response;
+  } catch (error) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' }
+    }) as NextResponse;
+  }
+}
+
 // Mock handler that simulates file upload API
 async function mockFileUploadHandler(req: NextRequest): Promise<NextResponse> {
   try {
@@ -13,22 +32,22 @@ async function mockFileUploadHandler(req: NextRequest): Promise<NextResponse> {
       // For testing, use the mocked body data
       body = (req as any)._testBody || await req.json();
     } catch (error) {
-      return NextResponse.json({ error: 'Invalid JSON in request body' }, { status: 400 });
+      return createTestResponse({ error: 'Invalid JSON in request body' }, 400);
     }
 
     const { files } = body;
 
     if (!files || !Array.isArray(files)) {
-      return NextResponse.json({ error: 'Invalid request: files array required' }, { status: 400 });
+      return createTestResponse({ error: 'Invalid request: files array required' }, 400);
     }
 
     // Simulate successful file processing
-    return NextResponse.json({ 
+    return createTestResponse({ 
       success: true, 
       filesProcessed: files.length 
-    });
+    }, 200);
   } catch (error) {
-    return NextResponse.json({ error: 'Server error' }, { status: 500 });
+    return createTestResponse({ error: 'Server error' }, 500);
   }
 }
 
@@ -39,6 +58,12 @@ function createTestRequest(url: string, options: any, bodyData?: any) {
     // Mock the json() method to return our test data
     (req as any)._testBody = bodyData;
     req.json = jest.fn().mockResolvedValue(bodyData);
+  } else if (options.body && typeof options.body === 'string') {
+    // For invalid JSON tests, mock to throw an error
+    req.json = jest.fn().mockRejectedValue(new SyntaxError('Unexpected token'));
+  } else {
+    // Default safe mock for GET requests or cases without body data
+    req.json = jest.fn().mockResolvedValue({});
   }
   return req;
 }
@@ -172,7 +197,7 @@ describe('API Security Integration', () => {
         { pathParam: 'file' }
       );
 
-      const maliciousRequest = new NextRequest('http://localhost:3000/api/test?file=../../../etc/passwd', {
+      const maliciousRequest = createTestRequest('http://localhost:3000/api/test?file=../../../etc/passwd', {
         method: 'GET',
         headers: new Headers({
           'x-forwarded-for': '192.168.1.1'
@@ -313,7 +338,7 @@ describe('API Security Integration', () => {
         { bodyPathFields: ['files.0.path'] }
       );
 
-      const invalidJsonRequest = new NextRequest('http://localhost:3000/api/test', {
+      const invalidJsonRequest = createTestRequest('http://localhost:3000/api/test', {
         method: 'POST',
         headers: new Headers({
           'content-type': 'application/json',
@@ -336,13 +361,14 @@ describe('API Security Integration', () => {
         { bodyPathFields: ['files.0.path'] }
       );
 
-      const noContentTypeRequest = new NextRequest('http://localhost:3000/api/test', {
+      const bodyData = { files: [{ path: 'test.txt', content: 'content' }] };
+      const noContentTypeRequest = createTestRequest('http://localhost:3000/api/test', {
         method: 'POST',
         headers: new Headers({
           'x-forwarded-for': '192.168.1.1'
         }),
-        body: JSON.stringify({ files: [{ path: 'test.txt', content: 'content' }] })
-      });
+        body: JSON.stringify(bodyData)
+      }, bodyData);
 
       // Should not crash, may return error but shouldn't throw
       const response = await secureHandler(noContentTypeRequest);
@@ -359,16 +385,17 @@ describe('API Security Integration', () => {
         { bodyPathFields: ['files.0.path'] }
       );
 
-      const request = new NextRequest('http://localhost:3000/api/test', {
+      const bodyData = {
+        files: [{ path: '../attack.txt', content: 'malicious' }]
+      };
+      const request = createTestRequest('http://localhost:3000/api/test', {
         method: 'POST',
         headers: new Headers({
           'content-type': 'application/json',
           'x-forwarded-for': '192.168.1.200'
         }),
-        body: JSON.stringify({
-          files: [{ path: '../attack.txt', content: 'malicious' }]
-        })
-      });
+        body: JSON.stringify(bodyData)
+      }, bodyData);
 
       await secureHandler(request);
 
